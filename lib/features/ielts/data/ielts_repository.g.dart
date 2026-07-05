@@ -6,7 +6,7 @@ part of 'ielts_repository.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$ieltsRepositoryHash() => r'3c52186bf07c3b1bfc3f97968ba917f1e3a537fa';
+String _$ieltsRepositoryHash() => r'0cbd35f4cf377b06a4e12453a870c0bce69e350c';
 
 /// See also [ieltsRepository].
 @ProviderFor(ieltsRepository)

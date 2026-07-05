@@ -6,7 +6,7 @@ part of 'koras_audio_player.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$playbackUrlHash() => r'a87a2ea83f34121e57d4da69f9a4efe580a8e7ab';
+String _$playbackUrlHash() => r'b4dfc02a00c49a249c1434b030648a24ea3d99a6';
 
 /// Copied from Dart SDK
 class _SystemHash {
@@ -29,22 +29,22 @@ class _SystemHash {
   }
 }
 
-/// Presign a GET on demand. A 410 from the edge fn → [GoneError] → "expired".
+/// Get a playback URL from koras-api. A 410 → [GoneError] → "expired".
 ///
 /// Copied from [playbackUrl].
 @ProviderFor(playbackUrl)
 const playbackUrlProvider = PlaybackUrlFamily();
 
-/// Presign a GET on demand. A 410 from the edge fn → [GoneError] → "expired".
+/// Get a playback URL from koras-api. A 410 → [GoneError] → "expired".
 ///
 /// Copied from [playbackUrl].
 class PlaybackUrlFamily extends Family<AsyncValue<String>> {
-  /// Presign a GET on demand. A 410 from the edge fn → [GoneError] → "expired".
+  /// Get a playback URL from koras-api. A 410 → [GoneError] → "expired".
   ///
   /// Copied from [playbackUrl].
   const PlaybackUrlFamily();
 
-  /// Presign a GET on demand. A 410 from the edge fn → [GoneError] → "expired".
+  /// Get a playback URL from koras-api. A 410 → [GoneError] → "expired".
   ///
   /// Copied from [playbackUrl].
   PlaybackUrlProvider call(
@@ -79,11 +79,11 @@ class PlaybackUrlFamily extends Family<AsyncValue<String>> {
   String? get name => r'playbackUrlProvider';
 }
 
-/// Presign a GET on demand. A 410 from the edge fn → [GoneError] → "expired".
+/// Get a playback URL from koras-api. A 410 → [GoneError] → "expired".
 ///
 /// Copied from [playbackUrl].
 class PlaybackUrlProvider extends AutoDisposeFutureProvider<String> {
-  /// Presign a GET on demand. A 410 from the edge fn → [GoneError] → "expired".
+  /// Get a playback URL from koras-api. A 410 → [GoneError] → "expired".
   ///
   /// Copied from [playbackUrl].
   PlaybackUrlProvider(

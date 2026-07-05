@@ -22,10 +22,21 @@ import '../../features/ielts/domain/ielts_enums.dart';
 import '../../features/ielts/presentation/ielts_screens.dart';
 import '../../features/interview_prep/presentation/interview_screens.dart';
 import '../../features/invitations/presentation/invite_screen.dart';
+import '../../features/listening/presentation/listening_home_screen.dart';
+import '../../features/listening/presentation/listening_runtime_screen.dart';
 import '../../features/locked/presentation/locked_screen.dart';
 import '../../features/onboarding/presentation/onboarding_screen.dart';
 import '../../features/programs/presentation/program_access_providers.dart';
 import '../../features/settings/presentation/settings_screen.dart';
+import '../../features/vocabulary/presentation/vocabulary_attempt_screen.dart';
+import '../../features/vocabulary/presentation/vocabulary_home_screen.dart';
+import '../../features/vocabulary/presentation/vocabulary_library_screen.dart';
+import '../../features/voice_foundations/presentation/voice_foundations_activity_screen.dart';
+import '../../features/voice_foundations/presentation/voice_foundations_home_screen.dart';
+import '../../features/voice_refinement/presentation/voice_refinement_activity_screen.dart';
+import '../../features/voice_refinement/presentation/voice_refinement_baseline_screen.dart';
+import '../../features/voice_refinement/presentation/voice_refinement_explore_screen.dart';
+import '../../features/voice_refinement/presentation/voice_refinement_home_screen.dart';
 import '../../shared/models/enums.dart';
 import '../../shared/providers/current_org_status.dart';
 import '../../shared/providers/current_profile.dart';
@@ -41,6 +52,10 @@ const _programIdForRoute = <String, String>{
   '/app/ai-tutor': 'ai-tutor',
   '/app/ielts': 'ielts-speaking',
   '/app/interview-prep': 'interview-prep',
+  '/app/voice-foundations': 'voice-foundations',
+  '/app/vocabulary': 'daily-vocabulary',
+  '/app/listening': 'listening-comprehension',
+  '/app/voice-refinement': 'voice-refinement',
 };
 
 @Riverpod(keepAlive: true)
@@ -322,6 +337,108 @@ GoRouter appRouter(Ref ref) {
               GoRoute(
                   path: '/app/admin-unavailable',
                   builder: (_, __) => const AdminUnavailableScreen()),
+            ],
+          ),
+          // 15 — Voice Foundations (program, 7-day plan)
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/app/voice-foundations',
+                builder: (_, __) => const VoiceFoundationsHomeScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'activity/:activityId',
+                    builder: (_, s) => VoiceFoundationsActivityScreen(
+                      activityId: s.pathParameters['activityId']!,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          // 16 — Daily Vocabulary (program)
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/app/vocabulary',
+                builder: (_, __) => const VocabularyHomeScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'library',
+                    builder: (_, __) => const VocabularyLibraryScreen(),
+                  ),
+                  GoRoute(
+                    path: 'history',
+                    builder: (_, __) => const VocabularyHistoryScreen(),
+                  ),
+                  GoRoute(
+                    path: 'word/:word',
+                    builder: (_, s) => VocabularyWordScreen(
+                      word: Uri.decodeComponent(s.pathParameters['word']!),
+                      dailySetId: s.uri.queryParameters['setId'] ?? '',
+                    ),
+                  ),
+                  GoRoute(
+                    path: 'attempt',
+                    builder: (_, s) => VocabularyAttemptScreen(
+                      word: s.uri.queryParameters['word'] ?? '',
+                      kind: s.uri.queryParameters['kind'] ?? 'pronounce',
+                      dailySetId: s.uri.queryParameters['setId'] ?? '',
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          // 17 — Listening Comprehension (program)
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/app/listening',
+                builder: (_, __) => const ListeningHomeScreen(),
+                routes: [
+                  GoRoute(
+                    path: ':passageId',
+                    builder: (_, s) => ListeningRuntimeScreen(
+                      passageId: s.pathParameters['passageId']!,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          // 18 — Voice Refinement (program, 14-day plan)
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/app/voice-refinement',
+                builder: (_, __) => const VoiceRefinementHomeScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'baseline',
+                    builder: (_, __) =>
+                        const VoiceRefinementBaselineScreen(),
+                  ),
+                  GoRoute(
+                    path: 'explore/:baselineId',
+                    builder: (_, s) => VoiceRefinementExploreScreen(
+                      baselineId: s.pathParameters['baselineId']!,
+                    ),
+                  ),
+                  GoRoute(
+                    path: 'activity/:activityId',
+                    builder: (_, s) => VoiceRefinementActivityScreen(
+                      activityId: s.pathParameters['activityId']!,
+                      planId: s.uri.queryParameters['planId'] ?? '',
+                      day: int.tryParse(
+                              s.uri.queryParameters['day'] ?? '1') ??
+                          1,
+                      isCheckpoint:
+                          s.uri.queryParameters['checkpoint'] == '1',
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
         ],

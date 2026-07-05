@@ -1,56 +1,25 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart' show Ref;
 import 'package:http/http.dart' as http;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../core/errors/app_error.dart';
-import 'supabase_service.dart';
+import 'koras_api_client.dart';
 
 part 'r2_client.g.dart';
 
-/// Result of a presigned-PUT request.
-class PresignedPut {
-  const PresignedPut({required this.uploadUrl, required this.objectKey});
-  final String uploadUrl;
-  final String objectKey;
-}
-
-/// Presigned-URL R2 transfer. Presign endpoints come from edge functions
-/// (`recordings-presign-{put,get}`); bytes go direct via bare `http` (streams
-/// without buffering the whole body — never route blobs through dio). See 08/12.
+/// Simplified R2 transfer client.
+///
+/// Presign requests now go through koras-api (no more edge functions).
+/// Direct PUT/GET remain for cases where the presigned URL is already minted
+/// (e.g. AI Tutor recording upload via presigned PUT).
 class R2Client {
-  R2Client(this._sb);
-  final SupabaseClient _sb;
+  R2Client(this._api);
+  final KorasApiClient _api;
 
-  /// Mint a presigned PUT for an object owned by the caller.
-  Future<PresignedPut> presignPut({
-    required String scope,
-    required String contentType,
-    String? id,
-    String? ownerId,
-  }) async {
-    final res = await _sb.functions.invoke('recordings-presign-put', body: {
-      'scope': scope,
-      'contentType': contentType,
-      if (id != null) 'id': id,
-      if (ownerId != null) 'ownerId': ownerId,
-    });
-    if (res.status != 200) throw mapEdgeError(res);
-    final data = res.data as Map;
-    return PresignedPut(
-      uploadUrl: data['uploadUrl'] as String,
-      objectKey: data['objectKey'] as String,
-    );
-  }
+  /// Get a playback URL for an audio key (minted by koras-api).
+  Future<String> playbackUrl(String audioKey) => _api.playbackUrl(audioKey);
 
-  /// Mint a presigned GET (5-min TTL; 410 once the object passes its lifecycle).
-  Future<String> presignGet(String objectKey) async {
-    final res = await _sb.functions
-        .invoke('recordings-presign-get', body: {'objectKey': objectKey});
-    if (res.status != 200) throw mapEdgeError(res);
-    return (res.data as Map)['url'] as String;
-  }
-
+  /// PUT bytes directly to R2 using a presigned URL.
   Future<void> putBytes(
     String uploadUrl,
     List<int> bytes,
@@ -79,4 +48,4 @@ class R2Client {
 }
 
 @riverpod
-R2Client r2Client(Ref ref) => R2Client(ref.watch(supabaseProvider));
+R2Client r2Client(Ref ref) => R2Client(ref.watch(korasApiClientProvider));

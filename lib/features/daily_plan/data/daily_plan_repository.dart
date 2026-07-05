@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart' show Ref;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../../core/errors/app_error.dart';
+import '../../../services/koras_api_client.dart';
 import '../../../services/supabase_service.dart';
 import '../../../shared/models/enums.dart';
 import 'daily_plan.dart';
@@ -10,35 +10,39 @@ import 'daily_plan.dart';
 part 'daily_plan_repository.g.dart';
 
 @riverpod
-DailyPlanRepository dailyPlanRepository(Ref ref) =>
-    DailyPlanRepository(ref.watch(supabaseProvider));
+DailyPlanRepository dailyPlanRepository(Ref ref) => DailyPlanRepository(
+      ref.watch(korasApiClientProvider),
+      ref.watch(supabaseProvider),
+    );
 
-/// The daily plan is server-owned (lazy generation). See 16.
+/// Daily plan is server-owned (lazy generation via koras-api).
+/// See `docs/MOBILE_API_ALIGNMENT_PLAN.md` §4.2.
 class DailyPlanRepository {
-  DailyPlanRepository(this._sb);
+  DailyPlanRepository(this._api, this._sb);
+  final KorasApiClient _api;
   final SupabaseClient _sb;
 
-  Future<DailyPlan> current({
+  String get _uid => _api.userId;
+
+  Future<DailyPlan?> current({
     DailyPlanGenerationSource source = DailyPlanGenerationSource.lazyDashboard,
   }) async {
-    final res = await _sb.functions.invoke(
-      'daily-plan-generate',
-      body: {'source': 'lazy_dashboard'},
-    );
-    if (res.status != 200) throw mapEdgeError(res);
-    return DailyPlan.fromJson(
-        (res.data as Map)['plan'] as Map<String, dynamic>);
+    final data = await _api.apiGet('/daily-plan/$_uid/current');
+    final plan = data['plan'];
+    if (plan == null) return null;
+    return DailyPlan.fromJson((plan as Map).cast<String, dynamic>());
   }
 
-  Future<DailyPlan> completeItem(
-      String itemId, DailyPlanItemStatus status) async {
-    final res = await _sb.functions.invoke('daily-plan-complete-item', body: {
+  Future<void> completeItem(
+    String planId,
+    String itemId,
+    DailyPlanItemStatus status,
+  ) async {
+    await _api.apiPost('/daily-plan/$_uid/complete-item', {
+      'planId': planId,
       'itemId': itemId,
       'status': status.name,
     });
-    if (res.status != 200) throw mapEdgeError(res);
-    return DailyPlan.fromJson(
-        (res.data as Map)['plan'] as Map<String, dynamic>);
   }
 
   Future<List<DailyPlan>> history({int limit = 20}) async {
@@ -54,5 +58,5 @@ class DailyPlanRepository {
 }
 
 @riverpod
-Future<DailyPlan> currentDailyPlan(Ref ref) =>
+Future<DailyPlan?> currentDailyPlan(Ref ref) =>
     ref.watch(dailyPlanRepositoryProvider).current();

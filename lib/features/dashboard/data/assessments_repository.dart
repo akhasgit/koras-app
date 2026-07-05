@@ -1,33 +1,30 @@
-import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart' show Ref;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:uuid/uuid.dart';
 
 import '../../../core/errors/app_error.dart';
-import '../../../services/modal_client.dart';
-import '../../../services/r2_client.dart';
+import '../../../services/koras_api_client.dart';
 import '../../../services/supabase_service.dart';
 import '../../auth/domain/auth_session.dart';
-import '../domain/mime.dart';
 import 'voice_assessment.dart';
 
 part 'assessments_repository.g.dart';
 
 @riverpod
 AssessmentsRepository assessmentsRepository(Ref ref) => AssessmentsRepository(
+      ref.watch(korasApiClientProvider),
       ref.watch(supabaseProvider),
-      ref.watch(r2ClientProvider),
-      ref.watch(modalClientProvider),
     );
 
+/// Voice assessment now follows the async server-side pattern:
+/// upload audio → koras-api stores in R2 → koras-api calls koras-ai → writes result.
+/// Mobile never calls koras-ai directly. See `docs/MOBILE_API_ALIGNMENT_PLAN.md` §4.5.
 class AssessmentsRepository {
-  AssessmentsRepository(this._sb, this._r2, this._modal);
+  AssessmentsRepository(this._api, this._sb);
+  final KorasApiClient _api;
   final SupabaseClient _sb;
-  final R2Client _r2;
-  final ModalClient _modal;
 
   Future<VoiceAssessment?> latest(String userId) async {
     try {
@@ -60,78 +57,56 @@ class AssessmentsRepository {
     }
   }
 
-  /// Full pipeline: presign → (R2 PUT ‖ Modal /analyze) → insert row. The R2
-  /// PUT and the analyse call run in parallel. If the PUT fails the row is
-  /// still inserted transcript-only (audio_key = null). See 12.
+  /// Upload audio to koras-api which handles: R2 storage → koras-ai analysis → DB insert.
+  /// Returns the completed assessment. All AI/ML processing is server-side.
   Future<VoiceAssessment> persistAssessment({
     required File file,
     required String mimeType,
     bool isBaseline = false,
   }) async {
-    final uid = _sb.auth.currentUser?.id;
-    if (uid == null) throw const AuthError('Not signed in');
-
-    final assessmentId = const Uuid().v4();
     final bytes = await file.readAsBytes();
-    final ext = extensionForMime(mimeType);
 
-    final put = await _r2.presignPut(
-      scope: 'voice_assessment',
-      id: assessmentId,
-      contentType: mimeType,
+    // Upload via koras-api — server handles R2 storage + AI analysis + DB insert
+    final data = await _api.uploadAudio(bytes, mimeType);
+    final assessmentId = data['assessment_id'] as String;
+    final audioKey = data['audio_key'] as String;
+
+    // Trigger server-side analysis (server calls koras-ai, inserts scores)
+    final result = await _api.apiPost(
+      '/recordings/${_api.userId}/assess',
+      {
+        'assessment_id': assessmentId,
+        'audio_key': audioKey,
+        'is_baseline': isBaseline,
+      },
     );
 
-    final results = await Future.wait([
-      _r2
-          .putBytes(put.uploadUrl, bytes, mimeType)
-          .then((_) => true)
-          .catchError((_) => false),
-      _modal.analyze(bytes, 'recording.$ext'),
-    ]);
-    final uploaded = results[0] as bool;
-    final analysis = results[1] as Map<String, dynamic>;
+    // If the server returned the assessment inline, use it.
+    // Otherwise poll until complete.
+    if (result.containsKey('assessment')) {
+      return VoiceAssessment.fromRow(
+        (result['assessment'] as Map).cast<String, dynamic>(),
+      );
+    }
 
-    final scores = (analysis['scores'] as Map).cast<String, dynamic>();
-    final metrics = (analysis['metrics'] as Map?)?.cast<String, dynamic>();
+    // Poll until analysis completes
+    return _pollAssessment(assessmentId);
+  }
 
-    try {
+  Future<VoiceAssessment> _pollAssessment(String assessmentId) async {
+    const maxAttempts = 30;
+    for (var i = 0; i < maxAttempts; i++) {
+      await Future.delayed(const Duration(seconds: 3));
       final row = await _sb
           .from('voice_assessments')
-          .insert({
-            'id': assessmentId,
-            'user_id': uid,
-            'is_baseline': isBaseline,
-            'overall_score': scores['overall'],
-            'pitch_score': scores['pitch'],
-            'pace_score': scores['pace'],
-            'clarity_score': scores['clarity'],
-            'resonance_score': scores['resonance'],
-            'confidence_score': scores['confidence'],
-            'duration_seconds': metrics?['duration_seconds'],
-            'words_per_minute': metrics?['words_per_minute'],
-            'mean_pitch_hz': metrics?['mean_pitch_hz'],
-            'pitch_std_hz': metrics?['pitch_std_hz'],
-            'hnr_db': metrics?['hnr_db'],
-            'pause_count': metrics?['pause_count'],
-            'long_pause_count': metrics?['long_pause_count'],
-            'transcript': analysis['transcript'],
-            'transcript_analysis': analysis['transcript_analysis'],
-            'coach_feedback': analysis['coach_feedback'],
-            'archetype': analysis['archetype'],
-            'audio_key': uploaded ? put.objectKey : null,
-            'audio_mime_type': uploaded ? mimeType : null,
-            'audio_uploaded_at':
-                uploaded ? DateTime.now().toUtc().toIso8601String() : null,
-          })
           .select()
-          .single();
-
-      if (uploaded) unawaited(file.delete().catchError((_) => file));
-
-      return VoiceAssessment.fromRow(row);
-    } on PostgrestException catch (e) {
-      throw mapPostgrestError(e);
+          .eq('id', assessmentId)
+          .maybeSingle();
+      if (row != null && row['overall_score'] != null) {
+        return VoiceAssessment.fromRow(row);
+      }
     }
+    throw const ServerError('Assessment analysis timed out');
   }
 }
 

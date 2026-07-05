@@ -6,10 +6,12 @@ part of 'auth_session.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$authSessionHash() => r'bf305e4257e853f2e5f8465d7a5d818bd23f5110';
+String _$authSessionHash() => r'9048153e8b33ac9cf8c4dd32cc7a93b8cfffb8c3';
 
 /// The current Supabase [Session] (or null), kept live across the app. Emits on
-/// every auth change; refreshes the profile only on identity changes. See 05.
+/// every auth change. [currentProfileProvider] watches this provider and
+/// refetches automatically — do not invalidate it from here (circular dep).
+/// See 05.
 ///
 /// Copied from [AuthSession].
 @ProviderFor(AuthSession)

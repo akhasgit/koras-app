@@ -239,6 +239,7 @@ class ScenarioPracticeScreen extends HookConsumerWidget {
         final attemptId = await repo.recordAnswer(
           scenarioId: id,
           questionId: q.id,
+          question: q.question,
           sessionId: s.practiceSessionId,
           bytes: bytes,
           mimeType: mimeType,

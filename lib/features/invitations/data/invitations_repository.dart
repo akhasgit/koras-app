@@ -1,42 +1,38 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart' show Ref;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../../core/errors/app_error.dart';
-import '../../../services/supabase_service.dart';
+import '../../../services/koras_api_client.dart';
 import '../../../shared/models/enums.dart';
 
 part 'invitations_repository.g.dart';
 
 @riverpod
 InvitationsRepository invitationsRepository(Ref ref) =>
-    InvitationsRepository(ref.watch(supabaseProvider));
+    InvitationsRepository(ref.watch(korasApiClientProvider));
 
-/// Invitations go through edge functions (cross-email reads need `service_role`).
-/// See 06 / 08.
+/// Invitations route through koras-api.
+/// See `docs/MOBILE_API_ALIGNMENT_PLAN.md` §4.6.
 class InvitationsRepository {
-  InvitationsRepository(this._sb);
-  final SupabaseClient _sb;
+  InvitationsRepository(this._api);
+  final KorasApiClient _api;
 
-  /// Accept an invitation by token. 404 = expired/used, 403 = email mismatch.
+  String get _uid => _api.userId;
+
+  /// Accept an invitation by token. Public route (no uid prefix).
   Future<void> accept(String token) async {
-    final res = await _sb.functions
-        .invoke('invitations-accept', body: {'token': token});
-    if (res.status != 200) throw mapEdgeError(res);
+    await _api.apiPost('/invitations/accept', {'token': token});
   }
 
-  /// Send an invitation (org-admin/manager). Returns the invitation id.
-  Future<String> send({
+  /// Send invitation(s) (org-admin/manager).
+  Future<void> send({
     required String email,
     required UserRole role,
     String? groupId,
   }) async {
-    final res = await _sb.functions.invoke('invitations-send', body: {
-      'email': email,
+    await _api.apiPost('/org/$_uid/invitations/send', {
+      'emails': [email],
       'role': role.name,
       if (groupId != null) 'groupId': groupId,
     });
-    if (res.status != 200) throw mapEdgeError(res);
-    return (res.data as Map)['invitationId'] as String;
   }
 }

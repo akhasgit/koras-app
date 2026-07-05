@@ -7,7 +7,7 @@ part of 'assessments_repository.dart';
 // **************************************************************************
 
 String _$assessmentsRepositoryHash() =>
-    r'50ccc75ff4686285b0e51965449ee5ebdf1de4e5';
+    r'8196cbc85dc25572e228cb741d0085db02ae3fb9';
 
 /// See also [assessmentsRepository].
 @ProviderFor(assessmentsRepository)

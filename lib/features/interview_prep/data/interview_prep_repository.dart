@@ -1,11 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart' show Ref;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:uuid/uuid.dart';
 
-import '../../../core/errors/app_error.dart';
-import '../../../services/r2_client.dart';
-import '../../../services/supabase_service.dart';
+import '../../../services/koras_api_client.dart';
 import '../domain/default_questions.dart';
 import 'interview_models.dart';
 
@@ -13,31 +9,24 @@ part 'interview_prep_repository.g.dart';
 
 @riverpod
 InterviewPrepRepository interviewPrepRepository(Ref ref) =>
-    InterviewPrepRepository(
-      ref.watch(supabaseProvider),
-      ref.watch(r2ClientProvider),
-    );
+    InterviewPrepRepository(ref.watch(korasApiClientProvider));
 
+/// Interview Prep now routes through koras-api (`/interview/{uid}/...`).
+/// All AI analysis is server-side (202 + background task + polling).
+/// See `docs/MOBILE_API_ALIGNMENT_PLAN.md` §4.3.
 class InterviewPrepRepository {
-  InterviewPrepRepository(this._sb, this._r2);
-  final SupabaseClient _sb;
-  final R2Client _r2;
+  InterviewPrepRepository(this._api);
+  final KorasApiClient _api;
 
-  /// Defaults (`user_id IS NULL`) + the caller's own scenarios.
+  String get _uid => _api.userId;
+
   Future<List<InterviewScenario>> listScenarios() async {
-    try {
-      final uid = _sb.auth.currentUser?.id;
-      final rows = await _sb
-          .from('interview_prep_scenarios')
-          .select()
-          .or('user_id.is.null${uid != null ? ',user_id.eq.$uid' : ''}')
-          .order('created_at', ascending: false);
-      return (rows as List)
-          .map((r) => InterviewScenario.fromJson(r as Map<String, dynamic>))
-          .toList();
-    } on PostgrestException catch (e) {
-      throw mapPostgrestError(e);
-    }
+    final data = await _api.apiGet('/interview/$_uid/scenarios');
+    final list = data['scenarios'] as List?;
+    if (list == null) return const [];
+    return list
+        .map((r) => InterviewScenario.fromJson(r as Map<String, dynamic>))
+        .toList();
   }
 
   Future<InterviewScenario> createScenario({
@@ -46,37 +35,30 @@ class InterviewPrepRepository {
     String? company,
     String? jobDescription,
   }) async {
-    try {
-      final row = await _sb
-          .from('interview_prep_scenarios')
-          .insert({
-            'user_id': _sb.auth.currentUser?.id,
-            'title': title,
-            'job_role': jobRole,
-            'company': company,
-            'job_description': jobDescription,
-          })
-          .select()
-          .single();
-      return InterviewScenario.fromJson(row);
-    } on PostgrestException catch (e) {
-      throw mapPostgrestError(e);
-    }
+    final data = await _api.apiPost('/interview/$_uid/scenarios', {
+      'title': title,
+      if (jobRole != null) 'jobRole': jobRole,
+      if (company != null) 'company': company,
+      if (jobDescription != null) 'jobDescription': jobDescription,
+    });
+    return InterviewScenario.fromJson(
+      (data['scenario'] as Map).cast<String, dynamic>(),
+    );
   }
 
-  /// Generate a question bank; falls back to the ported default bank on error.
+  /// Server-side question generation using Claude.
   Future<List<InterviewQuestion>> generateQuestions({
     required String scenarioId,
     String? jobDescription,
   }) async {
     try {
-      final res = await _sb.functions
-          .invoke('interview-prep-generate-questions', body: {
+      final data = await _api.apiPost('/interview/$_uid/scenarios/generate', {
         'scenarioId': scenarioId,
         if (jobDescription != null) 'jobDescription': jobDescription,
       });
-      if (res.status != 200) return kDefaultQuestions;
-      return ((res.data as Map)['questions'] as List)
+      final questions = data['questions'] as List?;
+      if (questions == null) return kDefaultQuestions;
+      return questions
           .map((q) => InterviewQuestion.fromJson(q as Map<String, dynamic>))
           .toList();
     } catch (_) {
@@ -84,66 +66,68 @@ class InterviewPrepRepository {
     }
   }
 
-  /// Record one answer: insert attempt → presign → PUT → request analysis.
-  /// Returns the attemptId so the caller can track it (don't block on analysis).
+  /// Async recording pipeline:
+  /// 1. start attempt → 2. upload audio → 3. upload-complete → 4. analyze (202)
+  /// Returns the attemptId for polling.
   Future<String> recordAnswer({
     required String scenarioId,
     required String questionId,
+    required String question,
     required String sessionId,
     required List<int> bytes,
     required String mimeType,
+    int? durationSeconds,
   }) async {
-    final attemptId = const Uuid().v4();
-    await _sb.from('interview_prep_attempts').insert({
-      'id': attemptId,
-      'user_id': _sb.auth.currentUser?.id,
-      'scenario_id': scenarioId,
-      'question_id': questionId,
-      'practice_session_id': sessionId,
-      'recording_upload_status': 'none',
-      'analysis_status': 'created',
-      'attempt_status': 'started',
+    // 1. Start attempt on backend
+    final startData = await _api.apiPost('/interview/$_uid/attempt/start', {
+      'scenarioId': scenarioId,
+      'questionId': questionId,
+      'question': question,
+      'practiceSessionId': sessionId,
+    });
+    final attempt = (startData['attempt'] as Map).cast<String, dynamic>();
+    final attemptId = attempt['id'] as String;
+
+    // 2. Upload audio to recordings endpoint
+    final uploadData = await _api.uploadAudio(bytes, mimeType,
+        assessmentId: attemptId);
+    final audioKey = uploadData['audio_key'] as String;
+    final audioMime = uploadData['audio_mime_type'] as String;
+
+    // 3. Confirm upload
+    await _api.apiPost('/interview/$_uid/attempt/upload-complete', {
+      'attemptId': attemptId,
+      'recordingUploadStatus': 'uploaded',
+      'audioObjectKey': audioKey,
+      'audioMimeType': audioMime,
+      if (durationSeconds != null) 'durationSeconds': durationSeconds,
     });
 
-    final put = await _r2.presignPut(
-      scope: 'interview_attempt',
-      id: attemptId,
-      contentType: mimeType,
-    );
-    await _r2.putBytes(put.uploadUrl, bytes, mimeType);
-    await _sb.from('interview_prep_attempts').update({
-      'audio_object_key': put.objectKey,
-      'recording_upload_status': 'uploaded',
-      'attempt_status': 'recorded',
-    }).eq('id', attemptId);
+    // 4. Trigger async analysis (returns 202)
+    await _api.apiPost('/interview/$_uid/attempt/analyze', {
+      'attemptId': attemptId,
+    });
 
-    await analyze(attemptId);
     return attemptId;
   }
 
-  /// Server enforces max 2 in-flight analyses per user (409 → caller retries).
-  Future<void> analyze(String attemptId) async {
-    final res = await _sb.functions
-        .invoke('interview-prep-analyze', body: {'attemptId': attemptId});
-    if (res.status == 409) {
-      throw const ConflictError('analysis queue full');
-    }
-    if (res.status != 200) throw mapEdgeError(res);
+  /// Poll attempt status until analysis is complete.
+  Future<InterviewAttempt> getAttempt(String attemptId) async {
+    final data = await _api.apiGet('/interview/$_uid/attempt/$attemptId');
+    return InterviewAttempt.fromJson(
+      (data['attempt'] as Map).cast<String, dynamic>(),
+    );
   }
 
   Future<List<InterviewAttempt>> listAttemptsBySession(String sessionId) async {
-    try {
-      final rows = await _sb
-          .from('interview_prep_attempts')
-          .select()
-          .eq('practice_session_id', sessionId)
-          .order('created_at');
-      return (rows as List)
-          .map((r) => InterviewAttempt.fromJson(r as Map<String, dynamic>))
-          .toList();
-    } on PostgrestException catch (e) {
-      throw mapPostgrestError(e);
-    }
+    final data = await _api.apiGet(
+      '/interview/$_uid/attempts/by-session?practiceSessionId=$sessionId',
+    );
+    final list = data['attempts'] as List?;
+    if (list == null) return const [];
+    return list
+        .map((r) => InterviewAttempt.fromJson(r as Map<String, dynamic>))
+        .toList();
   }
 }
 

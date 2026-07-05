@@ -7,7 +7,7 @@ part of 'invitations_repository.dart';
 // **************************************************************************
 
 String _$invitationsRepositoryHash() =>
-    r'8326511777d8a20756fab292a39a83bbaf0a6fd0';
+    r'738d7651452cf2df7f2f9e08206fc9a5e8f9fc6f';
 
 /// See also [invitationsRepository].
 @ProviderFor(invitationsRepository)

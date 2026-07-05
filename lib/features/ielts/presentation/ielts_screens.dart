@@ -122,14 +122,32 @@ class IeltsLessonScreen extends HookConsumerWidget {
       error.value = null;
       try {
         final bytes = await file.readAsBytes();
-        final r = await ref.read(ieltsRepositoryProvider).submitRecording(
+        final repo = ref.read(ieltsRepositoryProvider);
+        final attemptId = await repo.submitRecording(
               lessonId: lessonId,
               part: part,
               bytes: bytes,
               mimeType: mimeType,
               prompt: prompt,
             );
-        report.value = r;
+        // Poll until server-side analysis completes
+        IeltsReport? result;
+        for (var i = 0; i < 40; i++) {
+          await Future.delayed(const Duration(seconds: 3));
+          final data = await repo.getAttempt(attemptId);
+          final attempt = data['attempt'] as Map<String, dynamic>?;
+          if (attempt == null) continue;
+          final status = attempt['analysis_status'] as String?;
+          if (status == 'completed') {
+            result = IeltsReport.fromJson(attempt['raw_report'] as Map<String, dynamic>? ?? attempt);
+            break;
+          }
+          if (status == 'failed') {
+            throw Exception(attempt['analysis_error'] ?? 'Analysis failed');
+          }
+        }
+        if (result == null) throw Exception('Analysis timed out');
+        report.value = result;
         ref.invalidate(ieltsProgressProvider);
       } catch (e) {
         error.value = errorToMessage(e);

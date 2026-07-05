@@ -6,7 +6,7 @@ part of 'ai_tutor_notifier.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$aiTutorNotifierHash() => r'aa8744fd0dbf63fc8c43f48999fb4822e727990e';
+String _$aiTutorNotifierHash() => r'4e502699961098fa83d4fe84f52f3fb0cceb716e';
 
 /// Orchestrates the AI Tutor 8-state machine: start → connect WS + mic stream →
 /// transcripts → stop → upload recording → analyse → report. See 13.

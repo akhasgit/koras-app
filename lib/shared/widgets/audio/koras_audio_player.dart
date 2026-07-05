@@ -11,10 +11,10 @@ import '../../../services/r2_client.dart';
 
 part 'koras_audio_player.g.dart';
 
-/// Presign a GET on demand. A 410 from the edge fn → [GoneError] → "expired".
+/// Get a playback URL from koras-api. A 410 → [GoneError] → "expired".
 @riverpod
 Future<String> playbackUrl(Ref ref, String audioKey) =>
-    ref.watch(r2ClientProvider).presignGet(audioKey);
+    ref.watch(r2ClientProvider).playbackUrl(audioKey);
 
 /// Plays an R2 recording fed by a presigned GET. See 12.
 class KorasAudioPlayer extends ConsumerWidget {

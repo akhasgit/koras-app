@@ -1,14 +1,7 @@
-import 'dart:convert';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart' show Ref;
-import 'package:http/http.dart' as http;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../../core/env/env.dart';
-import '../../../core/errors/app_error.dart';
-import '../../../services/r2_client.dart';
-import '../../../services/supabase_service.dart';
+import '../../../services/koras_api_client.dart';
 import '../domain/ai_tutor_enums.dart';
 import 'ai_tutor_report.dart';
 
@@ -16,104 +9,49 @@ part 'ai_tutor_repository.g.dart';
 
 @riverpod
 AiTutorRepository aiTutorRepository(Ref ref) => AiTutorRepository(
-      ref.watch(supabaseProvider),
-      ref.watch(r2ClientProvider),
+      ref.watch(korasApiClientProvider),
     );
 
-/// AI Tutor control-plane calls go through the web Next.js API
-/// (`{WEB_SITE_URL}/api/ai-tutor/*`) authenticated with the Supabase JWT, so
-/// mobile and web share one backend. Recording bytes still PUT directly to R2.
-/// See `docs/AI_TUTOR_MOBILE_WEB_ALIGNMENT_PLAN.md` and 13.
+/// AI Tutor calls go through koras-api (`/ai-tutor/{uid}/{action}`).
+/// The backend handles all analysis via background tasks.
+/// See `docs/MOBILE_API_ALIGNMENT_PLAN.md` §4.1.
 class AiTutorRepository {
-  AiTutorRepository(this._sb, this._r2);
-  final SupabaseClient _sb;
-  final R2Client _r2;
+  AiTutorRepository(this._api);
+  final KorasApiClient _api;
 
-  static String get _baseUrl => Env.webSiteUrl.replaceAll(RegExp(r'/+$'), '');
-
-  Uri _url(String path) => Uri.parse('$_baseUrl$path');
-
-  Map<String, String> _headers() {
-    final token = _sb.auth.currentSession?.accessToken;
-    if (token == null || token.isEmpty) {
-      throw const AuthError('Not signed in');
-    }
-    return {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer $token',
-    };
-  }
-
-  Never _throwHttp(http.Response res) {
-    String? body;
-    try {
-      final decoded = jsonDecode(res.body);
-      if (decoded is Map) body = decoded['error']?.toString();
-    } catch (_) {/* non-JSON body */}
-    throw switch (res.statusCode) {
-      401 => AuthError(body ?? 'Not signed in'),
-      403 => PermissionError(body ?? 'Not allowed'),
-      404 => NotFoundError(body ?? 'Not found'),
-      409 => ConflictError(body ?? 'Conflict'),
-      410 => GoneError(body ?? 'Resource expired'),
-      final int s when s >= 500 => ServerError(body ?? 'Server error'),
-      _ => UnknownError(body ?? 'Request failed (${res.statusCode})'),
-    };
-  }
-
-  Future<Map<String, dynamic>> _post(
-    String path,
-    Map<String, dynamic> body,
-  ) async {
-    final http.Response res;
-    try {
-      res = await http.post(
-        _url(path),
-        headers: _headers(),
-        body: jsonEncode(body),
-      );
-    } on AppError {
-      rethrow;
-    } catch (e) {
-      throw NetworkError('Network problem ($e)');
-    }
-    if (res.statusCode != 200) _throwHttp(res);
-    if (res.body.isEmpty) return const {};
-    final decoded = jsonDecode(res.body);
-    return (decoded as Map).cast<String, dynamic>();
-  }
+  String get _uid => _api.userId;
 
   Future<String> startSession(AiTutorMode mode) async {
-    final data = await _post('/api/ai-tutor/start', {'mode': mode.wire});
+    final data = await _api.apiPost('/ai-tutor/$_uid/start', {'mode': mode.wire});
     return data['sessionId'] as String;
   }
 
   Future<String> signedUrl(String sessionId) async {
-    final data =
-        await _post('/api/ai-tutor/signed-url', {'sessionId': sessionId});
+    final data = await _api.apiPost(
+      '/ai-tutor/$_uid/signed-url',
+      {'sessionId': sessionId},
+    );
     return data['signedUrl'] as String;
   }
 
-  /// Persist a transcript turn. `user_id` is filled server-side from the JWT.
   Future<void> saveTurn(
     String sessionId,
     TurnRole role,
     int index,
     String transcript,
   ) =>
-      _post('/api/ai-tutor/turn', {
+      _api.apiPost('/ai-tutor/$_uid/turn', {
         'sessionId': sessionId,
         'role': role == TurnRole.user ? 'user' : 'assistant',
         'turnIndex': index,
         'transcript': transcript,
       });
 
-  /// Presign the conversation recording PUT for this session (via web API).
   Future<PresignedPut> presignRecording(
     String sessionId,
     String contentType,
   ) async {
-    final data = await _post('/api/ai-tutor/recording-upload-url', {
+    final data = await _api.apiPost('/ai-tutor/$_uid/recording-upload-url', {
       'sessionId': sessionId,
       'contentType': contentType,
     });
@@ -128,16 +66,26 @@ class AiTutorRepository {
     List<int> bytes,
     String contentType,
   ) =>
-      _r2.putBytes(put.uploadUrl, bytes, contentType);
+      _api.putBytesToR2(put.uploadUrl, bytes, contentType);
 
-  Future<AiTutorReport> endSession({
+  /// Confirm audio upload was successful.
+  Future<void> confirmRecording(String sessionId, String objectKey) =>
+      _api.apiPost('/ai-tutor/$_uid/recording-confirm', {
+        'sessionId': sessionId,
+        'objectKey': objectKey,
+        'status': 'uploaded',
+      });
+
+  /// End session — returns 202; backend runs analysis in background.
+  /// Caller should poll sessionStatus until completed.
+  Future<void> endSession({
     required String sessionId,
     int? durationSeconds,
     String? audioObjectKey,
     String? recordingUploadStatus,
     String? elevenlabsConversationId,
   }) async {
-    final data = await _post('/api/ai-tutor/end', {
+    await _api.apiPost('/ai-tutor/$_uid/end', {
       'sessionId': sessionId,
       if (durationSeconds != null) 'durationSeconds': durationSeconds,
       if (audioObjectKey != null) 'audioObjectKey': audioObjectKey,
@@ -146,27 +94,39 @@ class AiTutorRepository {
       if (elevenlabsConversationId != null)
         'elevenlabsConversationId': elevenlabsConversationId,
     });
+  }
+
+  /// Poll session analysis status.
+  Future<String> sessionStatus(String sessionId) async {
+    final data = await _api.apiGet(
+      '/ai-tutor/$_uid/session/$sessionId/status',
+    );
+    return data['status'] as String;
+  }
+
+  /// Fetch report once analysis is complete.
+  Future<AiTutorReport> getReport(String sessionId) async {
+    final data = await _api.apiGet('/ai-tutor/$_uid/report/$sessionId');
     return AiTutorReport.fromJson(
-        (data['report'] as Map).cast<String, dynamic>());
+      (data['report'] as Map).cast<String, dynamic>(),
+    );
   }
 
   Future<List<AiTutorSession>> listSessions({int limit = 30}) async {
-    try {
-      final uid = _sb.auth.currentUser?.id;
-      if (uid == null) return const [];
-      final rows = await _sb
-          .from('ai_tutor_sessions')
-          .select()
-          .eq('user_id', uid)
-          .order('created_at', ascending: false)
-          .limit(limit);
-      return (rows as List)
-          .map((r) => AiTutorSession.fromJson(r as Map<String, dynamic>))
-          .toList();
-    } on PostgrestException catch (e) {
-      throw mapPostgrestError(e);
-    }
+    final data = await _api.apiGet('/ai-tutor/$_uid/sessions?limit=$limit');
+    final sessions = data['sessions'] as List?;
+    if (sessions == null) return const [];
+    return sessions
+        .map((r) => AiTutorSession.fromJson(r as Map<String, dynamic>))
+        .toList();
   }
+}
+
+/// Result of a presigned-PUT request.
+class PresignedPut {
+  const PresignedPut({required this.uploadUrl, required this.objectKey});
+  final String uploadUrl;
+  final String objectKey;
 }
 
 @riverpod

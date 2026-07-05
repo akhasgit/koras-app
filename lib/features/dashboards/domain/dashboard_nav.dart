@@ -26,6 +26,10 @@ const appShellBranchRoots = <String>[
   '/app/suspended', // 12
   '/app/locked', // 13
   '/app/admin-unavailable', // 14
+  '/app/voice-foundations', // 15
+  '/app/vocabulary', // 16
+  '/app/listening', // 17
+  '/app/voice-refinement', // 18
 ];
 
 /// A bottom-nav / sub-nav destination.

@@ -7,7 +7,7 @@ part of 'daily_plan_repository.dart';
 // **************************************************************************
 
 String _$dailyPlanRepositoryHash() =>
-    r'8db14bad112101a8c74148616dd9123642e935cc';
+    r'740d792010c10d8c6cace3a0ecd052ab8637f0f3';
 
 /// See also [dailyPlanRepository].
 @ProviderFor(dailyPlanRepository)
@@ -25,11 +25,11 @@ final dailyPlanRepositoryProvider =
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef DailyPlanRepositoryRef = AutoDisposeProviderRef<DailyPlanRepository>;
-String _$currentDailyPlanHash() => r'c4ab394ed442be44558d7090a9ba1bb3876ebd78';
+String _$currentDailyPlanHash() => r'0ff8248383af87d791d75da468613f4999eeac6f';
 
 /// See also [currentDailyPlan].
 @ProviderFor(currentDailyPlan)
-final currentDailyPlanProvider = AutoDisposeFutureProvider<DailyPlan>.internal(
+final currentDailyPlanProvider = AutoDisposeFutureProvider<DailyPlan?>.internal(
   currentDailyPlan,
   name: r'currentDailyPlanProvider',
   debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
@@ -41,6 +41,6 @@ final currentDailyPlanProvider = AutoDisposeFutureProvider<DailyPlan>.internal(
 
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
-typedef CurrentDailyPlanRef = AutoDisposeFutureProviderRef<DailyPlan>;
+typedef CurrentDailyPlanRef = AutoDisposeFutureProviderRef<DailyPlan?>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

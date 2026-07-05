@@ -52,19 +52,39 @@ const kPrograms = <Program>[
     route: '/app/dashboard',
   ),
   Program(
-    id: 'speaking-foundations',
-    label: 'Speaking Foundations',
-    status: ProgramStatus.incoming,
+    id: 'voice-foundations',
+    label: 'Voice Foundations',
+    status: ProgramStatus.live,
     description:
-        'Build the basics — pace, pitch, and clarity — through guided drills.',
+        'Build the basics — breath, pace, articulation, and clarity — through 7 guided days.',
     icon: LucideIcons.layers,
+    route: '/app/voice-foundations',
   ),
   Program(
     id: 'daily-vocabulary',
     label: 'Daily Vocabulary',
-    status: ProgramStatus.incoming,
+    status: ProgramStatus.live,
     description: 'A new word and pronunciation challenge every day.',
     icon: LucideIcons.bookText,
+    route: '/app/vocabulary',
+  ),
+  Program(
+    id: 'listening-comprehension',
+    label: 'Listening Comprehension',
+    status: ProgramStatus.live,
+    description:
+        'Listen to real-world passages and answer with taps or your voice.',
+    icon: LucideIcons.headphones,
+    route: '/app/listening',
+  ),
+  Program(
+    id: 'voice-refinement',
+    label: 'Voice Refinement',
+    status: ProgramStatus.live,
+    description:
+        'Record a baseline, set a target voice, and follow a 14-day plan.',
+    icon: LucideIcons.slidersHorizontal,
+    route: '/app/voice-refinement',
   ),
   Program(
     id: 'progress-tracking',

@@ -230,13 +230,22 @@ class AiTutorNotifier extends _$AiTutorNotifier {
 
     state = AiTutorSessionState.analyzing(sessionId);
     try {
-      final report = await repo.endSession(
+      // Confirm recording upload if successful
+      if (objectKey != null && uploadStatus == 'uploaded') {
+        await repo.confirmRecording(sessionId, objectKey);
+      }
+
+      // End session — returns 202, backend runs analysis in background
+      await repo.endSession(
         sessionId: sessionId,
         durationSeconds: duration,
         audioObjectKey: objectKey,
         recordingUploadStatus: uploadStatus,
         elevenlabsConversationId: _conversationId,
       );
+
+      // Poll until analysis completes
+      final report = await _pollForReport(repo, sessionId);
       ref.invalidate(learnerInsightsProvider);
       ref.invalidate(aiTutorSessionsProvider);
       state = AiTutorSessionState.report(report);
@@ -245,6 +254,24 @@ class AiTutorNotifier extends _$AiTutorNotifier {
     } finally {
       await _stopAudioOnly();
     }
+  }
+
+  Future<AiTutorReport> _pollForReport(
+    AiTutorRepository repo,
+    String sessionId,
+  ) async {
+    const maxAttempts = 40;
+    for (var i = 0; i < maxAttempts; i++) {
+      await Future.delayed(const Duration(seconds: 3));
+      final status = await repo.sessionStatus(sessionId);
+      if (status == 'completed') {
+        return repo.getReport(sessionId);
+      }
+      if (status == 'failed') {
+        throw const ServerError('Analysis failed on the server');
+      }
+    }
+    throw const ServerError('Analysis timed out');
   }
 
   void reset() {

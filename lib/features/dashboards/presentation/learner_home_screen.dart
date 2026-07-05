@@ -60,7 +60,7 @@ class DashboardLearnerScreen extends ConsumerWidget {
                           onComplete: (item, status) async {
                             await ref
                                 .read(dailyPlanRepositoryProvider)
-                                .completeItem(item.itemId, status);
+                                .completeItem(data.plan!.id, item.itemId, status);
                             ref.invalidate(currentDailyPlanProvider);
                             ref.invalidate(learnerHomeProvider);
                           },

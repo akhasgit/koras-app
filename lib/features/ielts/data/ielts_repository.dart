@@ -1,10 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart' show Ref;
+import 'package:http/http.dart' as http;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:uuid/uuid.dart';
 
+import '../../../core/env/env.dart';
 import '../../../core/errors/app_error.dart';
-import '../../../services/r2_client.dart';
+import '../../../services/koras_api_client.dart';
 import '../../../services/supabase_service.dart';
 import '../domain/ielts_enums.dart';
 import 'ielts_models.dart';
@@ -13,14 +14,21 @@ part 'ielts_repository.g.dart';
 
 @riverpod
 IeltsRepository ieltsRepository(Ref ref) => IeltsRepository(
+      ref.watch(korasApiClientProvider),
       ref.watch(supabaseProvider),
-      ref.watch(r2ClientProvider),
     );
 
+/// IELTS routes through koras-api (`/ielts/{uid}/...`).
+/// All scoring (band, criteria) is server-side.
+/// See `docs/MOBILE_API_ALIGNMENT_PLAN.md` §4.4.
 class IeltsRepository {
-  IeltsRepository(this._sb, this._r2);
+  IeltsRepository(this._api, this._sb);
+  final KorasApiClient _api;
   final SupabaseClient _sb;
-  final R2Client _r2;
+
+  String get _uid => _api.userId;
+
+  static String get _baseUrl => Env.korasApiUrl.replaceAll(RegExp(r'/+$'), '');
 
   Future<IeltsProgress?> progress() async {
     try {
@@ -37,7 +45,6 @@ class IeltsRepository {
     }
   }
 
-  /// Debounced (300ms) in the runtime; this just writes.
   Future<void> saveState(
     String lessonId,
     int blockIndex,
@@ -50,73 +57,67 @@ class IeltsRepository {
         'completed_block_indexes': completed,
       });
 
-  /// Insert a fresh attempt row directly (RLS); submit goes through the edge fn.
-  Future<void> createAttempt(
-          String attemptId, String lessonId, IeltsPart part) =>
-      _sb.from('ielts_lesson_attempts').insert({
-        'id': attemptId,
-        'user_id': _sb.auth.currentUser?.id,
-        'lesson_id': lessonId,
-        'part': part.wire,
-        'recording_upload_status': 'none',
-      });
-
-  Future<IeltsReport> submit({
-    required String attemptId,
-    required String lessonId,
-    required IeltsPart part,
-    required String audioObjectKey,
-    String? prompt,
-  }) async {
-    final res = await _sb.functions.invoke('ielts-attempt-submit', body: {
-      'attemptId': attemptId,
-      'lessonId': lessonId,
-      'part': part.wire,
-      'audioObjectKey': audioObjectKey,
-      if (prompt != null) 'prompt': prompt,
-    });
-    if (res.status != 200) throw mapEdgeError(res);
-    return IeltsReport.fromJson(
-        (res.data as Map)['report'] as Map<String, dynamic>);
-  }
-
-  /// Full attempt pipeline: insert row → presign → PUT → submit edge fn. See 14.
-  Future<IeltsReport> submitRecording({
+  /// Submit recording — audio goes to koras-api as multipart, backend runs
+  /// Whisper + Claude analysis in background (202). Returns attemptId for polling.
+  Future<String> submitRecording({
     required String lessonId,
     required IeltsPart part,
     required List<int> bytes,
     required String mimeType,
     String? prompt,
+    int? durationSeconds,
   }) async {
-    final attemptId = const Uuid().v4();
-    await createAttempt(attemptId, lessonId, part);
-    final put = await _r2.presignPut(
-      scope: 'ielts_attempt',
-      id: attemptId,
-      contentType: mimeType,
+    // 1. Start attempt on backend
+    final startData = await _api.apiPost('/ielts/$_uid/attempt/start', {
+      'lesson_id': lessonId,
+      'part': part.wire,
+      if (prompt != null) 'prompt': prompt,
+    });
+    final attempt = (startData['attempt'] as Map).cast<String, dynamic>();
+    final attemptId = attempt['id'] as String;
+
+    // 2. Submit audio as multipart (backend uploads to R2 + runs analysis in bg)
+    final request = http.MultipartRequest(
+      'POST',
+      Uri.parse('$_baseUrl/ielts/$_uid/attempt/submit'),
     );
-    await _r2.putBytes(put.uploadUrl, bytes, mimeType);
-    return submit(
-      attemptId: attemptId,
-      lessonId: lessonId,
-      part: part,
-      audioObjectKey: put.objectKey,
-      prompt: prompt,
-    );
+    request.files.add(http.MultipartFile.fromBytes(
+      'audio',
+      bytes,
+      filename: 'recording.webm',
+    ));
+    request.fields['attempt_id'] = attemptId;
+    request.fields['lesson_id'] = lessonId;
+    request.fields['part'] = part.wire;
+    if (prompt != null) request.fields['prompt'] = prompt;
+    if (durationSeconds != null) {
+      request.fields['duration_seconds'] = durationSeconds.toString();
+    }
+
+    await _api.apiPostForm('/ielts/$_uid/attempt/submit', request);
+    return attemptId;
+  }
+
+  /// Poll attempt status until analysis is complete.
+  Future<Map<String, dynamic>> getAttempt(String attemptId) async {
+    return _api.apiGet('/ielts/$_uid/attempt/$attemptId');
   }
 
   Future<String> mockStart() async {
-    final res = await _sb.functions.invoke('ielts-mock-start');
-    if (res.status != 200) throw mapEdgeError(res);
-    return (res.data as Map)['mockTestId'] as String;
+    final data = await _api.apiPost('/ielts/$_uid/mock/start', {});
+    final mock = data['mock'] as Map;
+    return mock['id'] as String;
   }
 
-  Future<IeltsMockTest> mockComplete(String mockTestId) async {
-    final res = await _sb.functions
-        .invoke('ielts-mock-complete', body: {'mockTestId': mockTestId});
-    if (res.status != 200) throw mapEdgeError(res);
-    return IeltsMockTest.fromJson(
-        (res.data as Map)['mockTest'] as Map<String, dynamic>);
+  Future<Map<String, dynamic>> mockComplete(String mockTestId) async {
+    return _api.apiPost('/ielts/$_uid/mock/complete', {
+      'mockTestId': mockTestId,
+    });
+  }
+
+  Future<Map<String, dynamic>?> getMock(String mockTestId) async {
+    final data = await _api.apiGet('/ielts/$_uid/mock/$mockTestId');
+    return data['mock'] as Map<String, dynamic>?;
   }
 }
 
