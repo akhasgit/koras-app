@@ -25,7 +25,9 @@ import '../../features/invitations/presentation/invite_screen.dart';
 import '../../features/listening/presentation/listening_home_screen.dart';
 import '../../features/listening/presentation/listening_runtime_screen.dart';
 import '../../features/locked/presentation/locked_screen.dart';
+import '../../features/inbox/presentation/inbox_screen.dart';
 import '../../features/onboarding/presentation/onboarding_screen.dart';
+import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/programs/presentation/program_access_providers.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/vocabulary/presentation/vocabulary_attempt_screen.dart';
@@ -85,6 +87,16 @@ GoRouter appRouter(Ref ref) {
             builder: (_, s) => InviteScreen(token: s.pathParameters['token']!),
           ),
         ],
+      ),
+      // Profile + Inbox — full-screen pages reached from the header avatar menu
+      // (they overlay the tab shell rather than living in it).
+      GoRoute(
+        path: '/app/profile',
+        builder: (_, __) => const ProfileScreen(),
+      ),
+      GoRoute(
+        path: '/app/inbox',
+        builder: (_, __) => const InboxScreen(),
       ),
       // Each branch keeps its own Navigator alive inside an IndexedStack, so
       // scroll position / form state / sub-navigation is preserved when you

@@ -42,6 +42,23 @@ class DashboardNavTab {
   final bool exact;
 }
 
+/// Centre floating action button in the glass tab bar. Learner/student personas
+/// get a Mic FAB that opens the AI Tutor (redesign Q2). Teacher/admin: none.
+class DashboardFab {
+  const DashboardFab(this.route, this.icon);
+  final String route;
+  final IconData icon;
+}
+
+/// The FAB shown in the middle of the bottom nav for a given persona.
+DashboardFab? fabForRole(NormalizedDashboardRole? role) => switch (role) {
+      NormalizedDashboardRole.individual ||
+      NormalizedDashboardRole.student ||
+      NormalizedDashboardRole.orgMember =>
+        const DashboardFab('/app/ai-tutor', LucideIcons.mic),
+      _ => null,
+    };
+
 /// Ported from `dashboard-nav.ts`: derive the normalised persona from
 /// `profiles.role` + `organizations.type`. See 20.
 NormalizedDashboardRole? mapProfileRoleToNormalized(
@@ -72,24 +89,19 @@ List<DashboardNavTab> tabsForRole(NormalizedDashboardRole? role) {
       exact: true);
   const settings =
       DashboardNavTab('Settings', '/app/settings', LucideIcons.settings);
+  // Learner/student/org-member share one 5-slot glass nav: the four tabs below
+  // plus a centre Mic FAB (see `fabForRole`) inserted between Voice and Paths.
+  const learner = [
+    DashboardNavTab('Today', '/app/dashboard', LucideIcons.house, exact: true),
+    DashboardNavTab('Voice', '/app/progress', LucideIcons.audioLines),
+    DashboardNavTab('Paths', '/app/practice', LucideIcons.bookOpen),
+    DashboardNavTab('Reads', '/app/history', LucideIcons.clock),
+  ];
   return switch (role) {
     NormalizedDashboardRole.individual ||
-    NormalizedDashboardRole.student =>
-      const [
-        dash,
-        DashboardNavTab('Practice', '/app/practice', LucideIcons.mic),
-        DashboardNavTab(
-            'Progress', '/app/progress', LucideIcons.chartLine),
-        DashboardNavTab('History', '/app/history', LucideIcons.clock),
-        settings,
-      ],
-    NormalizedDashboardRole.orgMember => const [
-        dash,
-        DashboardNavTab('Practice', '/app/practice', LucideIcons.mic),
-        DashboardNavTab(
-            'Progress', '/app/progress', LucideIcons.chartLine),
-        settings,
-      ],
+    NormalizedDashboardRole.student ||
+    NormalizedDashboardRole.orgMember =>
+      learner,
     NormalizedDashboardRole.teacher ||
     NormalizedDashboardRole.schoolAdmin =>
       const [

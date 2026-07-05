@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/koras_theme.dart';
 
-enum _KorasButtonVariant { primary, secondary, ghost, cream }
+enum _KorasButtonVariant { primary, secondary, ghost, cream, glass }
 
 /// Brand button with a Framer-Motion-like press dip (1.0→0.97).
 class KorasButton extends StatefulWidget {
@@ -48,6 +48,16 @@ class KorasButton extends StatefulWidget {
     bool loading = false,
   }) =>
       KorasButton._(_KorasButtonVariant.cream,
+          key: key, onPressed: onPressed, loading: loading, child: child);
+
+  /// Frosted glass button — translucent fill on ink text (Liquid Glass).
+  factory KorasButton.glass({
+    Key? key,
+    required VoidCallback? onPressed,
+    required Widget child,
+    bool loading = false,
+  }) =>
+      KorasButton._(_KorasButtonVariant.glass,
           key: key, onPressed: onPressed, loading: loading, child: child);
 
   final _KorasButtonVariant _variant;
@@ -103,6 +113,16 @@ class _KorasButtonState extends State<KorasButton> {
                 backgroundColor: k.paperWarm,
                 foregroundColor: k.ink900,
                 shape: const StadiumBorder(),
+              ),
+              child: child,
+            ),
+          _KorasButtonVariant.glass => FilledButton(
+              onPressed: onPressed,
+              style: FilledButton.styleFrom(
+                backgroundColor: k.glassFillStrong,
+                foregroundColor: k.ink900,
+                shape: StadiumBorder(side: BorderSide(color: k.glassBorder)),
+                elevation: 0,
               ),
               child: child,
             ),

@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../features/dashboards/domain/dashboard_nav.dart';
 import '../../providers/current_org.dart';
 import '../../providers/current_profile.dart';
+import '../glass/mesh_background.dart';
 import '../koras_loading.dart';
-import '../koras_logo.dart';
-import '../profile_menu_button.dart';
+import '../koras_tab_bar.dart';
 import 'org_admin_drawer.dart';
 
 /// The learner/teacher/org-admin app chrome. Derives the persona and picks
-/// bottom nav (learner/teacher) vs drawer (org-admin). See 04 / 20.
+/// the floating glass bottom nav (learner/teacher) vs drawer (org-admin).
 ///
 /// Wraps a [StatefulNavigationShell] so each branch (tab/program) keeps its own
 /// navigator alive in an IndexedStack — scroll position, form state and
@@ -25,31 +26,40 @@ class AppShell extends ConsumerWidget {
     final profile = ref.watch(currentProfileProvider).valueOrNull;
     final org = ref.watch(currentOrgProvider).valueOrNull;
     if (profile == null) {
-      return const Scaffold(body: KorasLoading());
+      return const Scaffold(body: MeshBackground(child: KorasLoading()));
     }
 
     final role = normalizeFromProfile(profile, org);
     final tabs = tabsForRole(role);
+    final fab = fabForRole(role);
     final loc = GoRouterState.of(context).matchedLocation;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const KorasLogo(height: 28),
-        centerTitle: true,
-        actions: [ProfileMenuButton(profile: profile)],
+    // Mesh fills the whole screen including the status bar.
+    // No AppBar — each screen owns its own header row (kicker + title + avatar).
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.dark, // dark icons on warm mesh background
+      child: Stack(
+        children: [
+          const Positioned.fill(child: MeshBackground()),
+          Scaffold(
+            extendBody: true,
+            backgroundColor: Colors.transparent,
+            drawer: tabs.isEmpty ? OrgAdminDrawer(activePath: loc) : null,
+            body: navigationShell,
+            bottomNavigationBar: tabs.isEmpty
+                ? null
+                : KorasTabBar(
+                    tabs: [
+                      for (final t in tabs) KorasTabItem(t.icon, t.label),
+                    ],
+                    selectedIndex: _selectedTab(tabs),
+                    onSelect: (i) => _onTabSelected(tabs, i),
+                    fabIcon: fab?.icon,
+                    onFabTap: fab == null ? null : () => context.go(fab.route),
+                  ),
+          ),
+        ],
       ),
-      drawer: tabs.isEmpty ? OrgAdminDrawer(activePath: loc) : null,
-      body: navigationShell,
-      bottomNavigationBar: tabs.isEmpty
-          ? null
-          : NavigationBar(
-              selectedIndex: _selectedTab(tabs),
-              destinations: [
-                for (final t in tabs)
-                  NavigationDestination(icon: Icon(t.icon), label: t.label),
-              ],
-              onDestinationSelected: (i) => _onTabSelected(tabs, i),
-            ),
     );
   }
 

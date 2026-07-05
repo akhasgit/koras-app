@@ -20,4 +20,31 @@ abstract final class KorasColors {
   static const success = Color(0xFF2E9E6B);
   static const warning = Color(0xFFE0A53A);
   static const danger = Color(0xFFD45A4E);
+
+  // ── Liquid Glass tokens (warm-light) ──────────────────────────────────
+  // Transcribed from `handoffs/koras-mobile-handoff/koras-tokens.jsx`.
+  /// Deep accent for text emphasis + score bands (handoff `accentDeep`).
+  static const accentDeep = Color(0xFFE8631F);
+
+  /// Warm amber for "warn" pills (handoff `warn`, light).
+  static const warn = Color(0xFFD98A2B);
+
+  /// Foreground on the accent fill.
+  static const onAccent = Color(0xFFFFFFFF);
+
+  /// Muted body/label text (handoff `muted`).
+  static const muted = Color(0xFF6B7280);
+
+  // Frosted card surfaces (white at varying opacity).
+  static const glassFill = Color(0x8CFFFFFF); // white @ 0.55
+  static const glassFillStrong = Color(0xBDFFFFFF); // white @ 0.74
+  static const glassBorder = Color(0xBFFFFFFF); // white @ 0.75
+  static const glassSheen = Color(0xA6FFFFFF); // white @ 0.65
+
+  // Mesh gradient tints painted behind every screen.
+  static const meshWarm1 = Color(0xFFFFE7D6);
+  static const meshWarm2 = Color(0xFFFFF1E0);
+  static const meshCool = Color(0xFFEDE6F6);
+  static const meshBaseTop = Color(0xFFFBF8F3);
+  static const meshBaseBottom = Color(0xFFF6F1E9);
 }

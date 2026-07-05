@@ -7,6 +7,32 @@ import 'package:google_fonts/google_fonts.dart';
 /// (see `all_docs/mobile/11-design-system.md`).
 ///
 /// `letterSpacing` is in logical pixels, so an em value becomes `em * fontSize`.
+/// Fraunces serif display style, upright. Used for card/section titles in the
+/// Liquid Glass redesign (`handoffs/koras-mobile-handoff`).
+TextStyle korasSerif(
+  double size, {
+  FontWeight weight = FontWeight.w600,
+  double? height,
+  Color? color,
+}) =>
+    GoogleFonts.fraunces(
+      fontSize: size,
+      fontWeight: weight,
+      height: height,
+      color: color,
+      letterSpacing: -0.02 * size,
+    );
+
+/// Italic Fraunces — the signature display voice of the redesign.
+TextStyle korasSerifItalic(
+  double size, {
+  FontWeight weight = FontWeight.w600,
+  double? height,
+  Color? color,
+}) =>
+    korasSerif(size, weight: weight, height: height, color: color)
+        .copyWith(fontStyle: FontStyle.italic);
+
 TextTheme buildTextTheme() {
   TextStyle display(double size, FontWeight weight, double trackingEm,
           {double? height}) =>

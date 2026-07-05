@@ -22,6 +22,14 @@ class KorasTheme extends ThemeExtension<KorasTheme> {
     required this.success,
     required this.warning,
     required this.danger,
+    required this.accentDeep,
+    required this.warn,
+    required this.onAccent,
+    required this.muted,
+    required this.glassFill,
+    required this.glassFillStrong,
+    required this.glassBorder,
+    required this.glassSheen,
     required this.containerMax,
     required this.cardRadius,
   });
@@ -30,6 +38,10 @@ class KorasTheme extends ThemeExtension<KorasTheme> {
   final Color ember, emberPressed, emberSoft;
   final Color paper, paperWarm, line;
   final Color success, warning, danger;
+
+  /// Liquid Glass tokens (see `colors.dart`).
+  final Color accentDeep, warn, onAccent, muted;
+  final Color glassFill, glassFillStrong, glassBorder, glassSheen;
 
   /// Max content width (72rem ≈ 1152.0).
   final double containerMax;
@@ -52,6 +64,14 @@ class KorasTheme extends ThemeExtension<KorasTheme> {
     success: KorasColors.success,
     warning: KorasColors.warning,
     danger: KorasColors.danger,
+    accentDeep: KorasColors.accentDeep,
+    warn: KorasColors.warn,
+    onAccent: KorasColors.onAccent,
+    muted: KorasColors.muted,
+    glassFill: KorasColors.glassFill,
+    glassFillStrong: KorasColors.glassFillStrong,
+    glassBorder: KorasColors.glassBorder,
+    glassSheen: KorasColors.glassSheen,
     containerMax: 1152.0,
     cardRadius: 24.0,
   );
@@ -72,6 +92,14 @@ class KorasTheme extends ThemeExtension<KorasTheme> {
     Color? success,
     Color? warning,
     Color? danger,
+    Color? accentDeep,
+    Color? warn,
+    Color? onAccent,
+    Color? muted,
+    Color? glassFill,
+    Color? glassFillStrong,
+    Color? glassBorder,
+    Color? glassSheen,
     double? containerMax,
     double? cardRadius,
   }) {
@@ -90,6 +118,14 @@ class KorasTheme extends ThemeExtension<KorasTheme> {
       success: success ?? this.success,
       warning: warning ?? this.warning,
       danger: danger ?? this.danger,
+      accentDeep: accentDeep ?? this.accentDeep,
+      warn: warn ?? this.warn,
+      onAccent: onAccent ?? this.onAccent,
+      muted: muted ?? this.muted,
+      glassFill: glassFill ?? this.glassFill,
+      glassFillStrong: glassFillStrong ?? this.glassFillStrong,
+      glassBorder: glassBorder ?? this.glassBorder,
+      glassSheen: glassSheen ?? this.glassSheen,
       containerMax: containerMax ?? this.containerMax,
       cardRadius: cardRadius ?? this.cardRadius,
     );
@@ -113,9 +149,25 @@ class KorasTheme extends ThemeExtension<KorasTheme> {
       success: Color.lerp(success, other.success, t)!,
       warning: Color.lerp(warning, other.warning, t)!,
       danger: Color.lerp(danger, other.danger, t)!,
+      accentDeep: Color.lerp(accentDeep, other.accentDeep, t)!,
+      warn: Color.lerp(warn, other.warn, t)!,
+      onAccent: Color.lerp(onAccent, other.onAccent, t)!,
+      muted: Color.lerp(muted, other.muted, t)!,
+      glassFill: Color.lerp(glassFill, other.glassFill, t)!,
+      glassFillStrong: Color.lerp(glassFillStrong, other.glassFillStrong, t)!,
+      glassBorder: Color.lerp(glassBorder, other.glassBorder, t)!,
+      glassSheen: Color.lerp(glassSheen, other.glassSheen, t)!,
       containerMax: containerMax + (other.containerMax - containerMax) * t,
       cardRadius: cardRadius + (other.cardRadius - cardRadius) * t,
     );
+  }
+
+  /// Score → colour band (handoff `scoreColor`, `koras-tokens.jsx`).
+  Color scoreColor(num value) {
+    if (value >= 85) return success;
+    if (value >= 70) return accentDeep;
+    if (value >= 50) return ember;
+    return muted;
   }
 }
 
