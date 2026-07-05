@@ -1,0 +1,8 @@
+{
+  "SUPABASE_URL": "https://your-project-ref.supabase.co",
+  "SUPABASE_ANON_KEY": "sb_publishable_or_anon_key",
+  "MODAL_BASE_URL": "https://your-username--koras-demo-fastapi-app.modal.run",
+  "DEEP_LINK_SCHEME": "koras",
+  "WEB_SITE_URL": "https://koras.vercel.app",
+  "ENV": "dev"
+}

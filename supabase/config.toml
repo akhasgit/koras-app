@@ -1,0 +1,58 @@
+# Supabase config for the Koras mobile edge functions.
+#
+# This config lives alongside the mobile app and is intentionally separate
+# from koras-web so the web project is never disrupted. Link it with:
+#   supabase link --project-ref <your-project-ref>
+# and deploy with:
+#   supabase functions deploy --project-ref <your-project-ref>
+#
+# project_id is the local-dev identifier; the deployed project is selected
+# by --project-ref at deploy time.
+project_id = "koras-mobile"
+
+# Every function authenticates the caller's JWT (verify_jwt = true). The
+# functions additionally re-check the user via supabase.auth.getUser() and
+# enforce RLS / RBAC. Names are kebab-case and MUST match the client's
+# functions.invoke('<name>') calls exactly (see all_docs/mobile/08).
+
+[functions.recordings-presign-put]
+verify_jwt = true
+
+[functions.recordings-presign-get]
+verify_jwt = true
+
+[functions.ai-tutor-start]
+verify_jwt = true
+
+[functions.ai-tutor-signed-url]
+verify_jwt = true
+
+[functions.ai-tutor-end]
+verify_jwt = true
+
+[functions.ielts-attempt-submit]
+verify_jwt = true
+
+[functions.ielts-mock-start]
+verify_jwt = true
+
+[functions.ielts-mock-complete]
+verify_jwt = true
+
+[functions.interview-prep-generate-questions]
+verify_jwt = true
+
+[functions.interview-prep-analyze]
+verify_jwt = true
+
+[functions.daily-plan-generate]
+verify_jwt = true
+
+[functions.daily-plan-complete-item]
+verify_jwt = true
+
+[functions.invitations-send]
+verify_jwt = true
+
+[functions.invitations-accept]
+verify_jwt = true
