@@ -21,10 +21,20 @@ class VocabularyRepository {
   String get _uid => _api.userId;
 
   /// Get today's 5 words (lazy generate-or-fetch on the server).
-  Future<VocabularyTodayResponse> today() async {
-    final data = await _api.apiPost('/vocabulary/$_uid/today', const {});
+  /// Pass [force] + [harder] to replace today's set with a tougher batch.
+  Future<VocabularyTodayResponse> today({
+    bool force = false,
+    bool harder = false,
+  }) async {
+    final data = await _api.apiPost('/vocabulary/$_uid/today', {
+      if (force) 'force': true,
+      if (harder) 'harder': true,
+    });
     return VocabularyTodayResponse.fromJson(data);
   }
+
+  Future<VocabularyTodayResponse> regenerateToday() =>
+      today(force: true, harder: true);
 
   Future<VocabularyStartResponse> startAttempt({
     String? dailySetId,

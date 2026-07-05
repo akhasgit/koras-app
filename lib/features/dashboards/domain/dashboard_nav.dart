@@ -19,17 +19,9 @@ const appShellBranchRoots = <String>[
   '/app/settings', // 5
   '/app/group', // 6
   '/app/org', // 7
-  '/app/ai-tutor', // 8
-  '/app/ielts', // 9
-  '/app/interview-prep', // 10
-  '/app/onboarding', // 11
-  '/app/suspended', // 12
-  '/app/locked', // 13
-  '/app/admin-unavailable', // 14
-  '/app/voice-foundations', // 15
-  '/app/vocabulary', // 16
-  '/app/listening', // 17
-  '/app/voice-refinement', // 18
+  '/app/onboarding', // 8
+  '/app/suspended', // 9
+  '/app/admin-unavailable', // 10
 ];
 
 /// A bottom-nav / sub-nav destination.

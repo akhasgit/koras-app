@@ -30,6 +30,7 @@ class EmailPasswordForm extends HookConsumerWidget {
     final password = useTextEditingController();
     final loading = useState(false);
     final error = useState<String?>(null);
+    final confirmationSent = useState(false);
 
     Future<void> submit() async {
       final problem =
@@ -43,7 +44,13 @@ class EmailPasswordForm extends HookConsumerWidget {
       try {
         final repo = ref.read(authRepositoryProvider);
         if (mode == AuthMode.signUp) {
-          await repo.signUp(email: email.text.trim(), password: password.text);
+          final response = await repo.signUp(
+            email: email.text.trim(),
+            password: password.text,
+          );
+          if (response.session == null) {
+            confirmationSent.value = true;
+          }
         } else {
           await repo.signInWithPassword(
             email: email.text.trim(),
@@ -57,6 +64,23 @@ class EmailPasswordForm extends HookConsumerWidget {
       } finally {
         if (context.mounted) loading.value = false;
       }
+    }
+
+    if (confirmationSent.value) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'Check your inbox.',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'We sent you a confirmation link. Click it to activate your account.',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+        ],
+      );
     }
 
     return Column(

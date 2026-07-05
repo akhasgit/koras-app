@@ -4,6 +4,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/theme/koras_theme.dart';
+import '../../../core/errors/app_error.dart';
 import '../../../shared/widgets/koras_button.dart';
 import '../../../shared/widgets/koras_card.dart';
 import '../../../shared/widgets/koras_screen.dart';
@@ -14,50 +15,88 @@ import '../data/vocabulary_repository.dart';
 class VocabularyHomeScreen extends ConsumerWidget {
   const VocabularyHomeScreen({super.key});
 
+  Future<void> _refreshHarderWords(WidgetRef ref) async {
+    await ref.read(vocabularyRepositoryProvider).regenerateToday();
+    ref.invalidate(vocabularyTodayProvider);
+    ref.invalidate(vocabularyProgressProvider);
+    await ref.read(vocabularyTodayProvider.future);
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final todayAsync = ref.watch(vocabularyTodayProvider);
     final progressAsync = ref.watch(vocabularyProgressProvider);
+    final k = context.koras;
 
     return KorasScreen(
       title: 'Daily Vocabulary',
-      children: [
-        const SizedBox(height: 8),
-        progressAsync.when(
-          data: (p) => _StatsRow(progress: p),
-          loading: () => const _StatsLoading(),
-          error: (e, _) => Text('Progress error: $e'),
-        ),
-        const SizedBox(height: 16),
-        Row(
+      scrollable: false,
+      child: RefreshIndicator(
+        color: k.ember,
+        onRefresh: () => _refreshHarderWords(ref),
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.only(bottom: 8),
           children: [
-            Expanded(
-              child: Text("Today's words",
-                  style: Theme.of(context).textTheme.titleMedium),
+            progressAsync.when(
+              data: (p) => _StatsRow(progress: p),
+              loading: () => const _StatsLoading(),
+              error: (e, _) => Text('Progress error: $e'),
             ),
-            TextButton.icon(
-              onPressed: () => context.push('/app/vocabulary/library'),
-              icon: const Icon(LucideIcons.library, size: 16),
-              label: const Text('Library'),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text("Today's words",
+                          style: Theme.of(context).textTheme.titleMedium),
+                      Text(
+                        'Pull down for harder words',
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodySmall
+                            ?.copyWith(color: k.ink500),
+                      ),
+                    ],
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: () => context.push('/app/vocabulary/library'),
+                  icon: const Icon(LucideIcons.library, size: 16),
+                  label: const Text('Library'),
+                ),
+                TextButton.icon(
+                  onPressed: () => context.push('/app/vocabulary/history'),
+                  icon: const Icon(LucideIcons.history, size: 16),
+                  label: const Text('History'),
+                ),
+              ],
             ),
-            TextButton.icon(
-              onPressed: () => context.push('/app/vocabulary/history'),
-              icon: const Icon(LucideIcons.history, size: 16),
-              label: const Text('History'),
+            const SizedBox(height: 12),
+            todayAsync.when(
+              data: (t) => _WordList(response: t),
+              loading: () => const Padding(
+                padding: EdgeInsets.all(32),
+                child: Center(child: CircularProgressIndicator()),
+              ),
+              error: (e, _) => Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text("Couldn't load today: ${errorToMessage(e)}"),
+                  const SizedBox(height: 12),
+                  KorasButton.secondary(
+                    onPressed: () => _refreshHarderWords(ref),
+                    child: const Text('Try again'),
+                  ),
+                ],
+              ),
             ),
+            const SizedBox(height: 32),
           ],
         ),
-        const SizedBox(height: 12),
-        todayAsync.when(
-          data: (t) => _WordList(response: t),
-          loading: () => const Padding(
-            padding: EdgeInsets.all(32),
-            child: Center(child: CircularProgressIndicator()),
-          ),
-          error: (e, _) => Text("Couldn't load today: $e"),
-        ),
-        const SizedBox(height: 32),
-      ],
+      ),
     );
   }
 }

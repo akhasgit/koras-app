@@ -278,7 +278,7 @@ class _FirstAssessmentCard extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           KorasButton.primary(
-            onPressed: () => context.go('/app/dashboard/assess?baseline=1'),
+            onPressed: () => context.push('/app/assess?baseline=1'),
             child: const Text('Start assessment'),
           ),
         ],

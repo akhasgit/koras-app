@@ -45,6 +45,7 @@ import '../../shared/providers/current_profile.dart';
 import '../../shared/widgets/shells/admin_shell.dart';
 import '../../shared/widgets/shells/app_shell.dart';
 import '../../shared/widgets/shells/auth_shell.dart';
+import '../../shared/widgets/transitions/mic_fab_transition.dart';
 import 'router_refresh.dart';
 
 part 'app_router.g.dart';
@@ -98,6 +99,161 @@ GoRouter appRouter(Ref ref) {
         path: '/app/inbox',
         builder: (_, __) => const InboxScreen(),
       ),
+      // Assessment — full-screen overlay (no bottom nav).
+      GoRoute(
+        path: '/app/assess',
+        builder: (_, s) => AssessScreen(
+          isBaseline: s.uri.queryParameters['baseline'] == '1',
+        ),
+      ),
+      // Program routes — full-screen overlays outside the tab shell.
+      GoRoute(
+        path: '/app/ai-tutor',
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: const AiTutorScreen(),
+          transitionDuration: const Duration(milliseconds: 400),
+          reverseTransitionDuration: const Duration(milliseconds: 320),
+          transitionsBuilder: micFabExpandTransition,
+        ),
+      ),
+      GoRoute(
+        path: '/app/ielts',
+        builder: (_, __) => const IeltsHomeScreen(),
+        routes: [
+          GoRoute(
+              path: 'lessons/:lessonId',
+              builder: (_, s) => IeltsLessonScreen(
+                  lessonId: s.pathParameters['lessonId']!)),
+          GoRoute(
+              path: 'practice/part-1',
+              builder: (_, __) =>
+                  const IeltsPracticeScreen(part: IeltsPart.part1)),
+          GoRoute(
+              path: 'practice/part-2',
+              builder: (_, __) =>
+                  const IeltsPracticeScreen(part: IeltsPart.part2)),
+          GoRoute(
+              path: 'practice/part-3',
+              builder: (_, __) =>
+                  const IeltsPracticeScreen(part: IeltsPart.part3)),
+          GoRoute(
+              path: 'mock-test',
+              builder: (_, __) => const IeltsMockTestScreen()),
+          GoRoute(
+              path: 'results/:attemptId',
+              builder: (_, s) => IeltsResultScreen(
+                  attemptId: s.pathParameters['attemptId']!)),
+        ],
+      ),
+      GoRoute(
+        path: '/app/interview-prep',
+        builder: (_, __) => const InterviewPrepHomeScreen(),
+        routes: [
+          GoRoute(
+              path: 'scenarios/new',
+              builder: (_, __) => const NewScenarioScreen()),
+          GoRoute(
+              path: 'scenarios/:scenarioId',
+              builder: (_, s) => ScenarioDetailScreen(
+                  id: s.pathParameters['scenarioId']!)),
+          GoRoute(
+              path: 'scenarios/:scenarioId/practice',
+              builder: (_, s) => ScenarioPracticeScreen(
+                  id: s.pathParameters['scenarioId']!)),
+          GoRoute(
+              path: 'session-summary/:scenarioId',
+              builder: (_, s) => SessionSummaryScreen(
+                  id: s.pathParameters['scenarioId']!)),
+          GoRoute(
+              path: 'attempts/:attemptId',
+              builder: (_, s) => InterviewAttemptScreen(
+                  id: s.pathParameters['attemptId']!)),
+        ],
+      ),
+      GoRoute(
+        path: '/app/voice-foundations',
+        builder: (_, __) => const VoiceFoundationsHomeScreen(),
+        routes: [
+          GoRoute(
+            path: 'activity/:activityId',
+            builder: (_, s) => VoiceFoundationsActivityScreen(
+              activityId: s.pathParameters['activityId']!,
+            ),
+          ),
+        ],
+      ),
+      GoRoute(
+        path: '/app/vocabulary',
+        builder: (_, __) => const VocabularyHomeScreen(),
+        routes: [
+          GoRoute(
+            path: 'library',
+            builder: (_, __) => const VocabularyLibraryScreen(),
+          ),
+          GoRoute(
+            path: 'history',
+            builder: (_, __) => const VocabularyHistoryScreen(),
+          ),
+          GoRoute(
+            path: 'word/:word',
+            builder: (_, s) => VocabularyWordScreen(
+              word: Uri.decodeComponent(s.pathParameters['word']!),
+              dailySetId: s.uri.queryParameters['setId'] ?? '',
+            ),
+          ),
+          GoRoute(
+            path: 'attempt',
+            builder: (_, s) => VocabularyAttemptScreen(
+              word: s.uri.queryParameters['word'] ?? '',
+              kind: s.uri.queryParameters['kind'] ?? 'pronounce',
+              dailySetId: s.uri.queryParameters['setId'] ?? '',
+            ),
+          ),
+        ],
+      ),
+      GoRoute(
+        path: '/app/listening',
+        builder: (_, __) => const ListeningHomeScreen(),
+        routes: [
+          GoRoute(
+            path: ':passageId',
+            builder: (_, s) => ListeningRuntimeScreen(
+              passageId: s.pathParameters['passageId']!,
+            ),
+          ),
+        ],
+      ),
+      GoRoute(
+        path: '/app/voice-refinement',
+        builder: (_, __) => const VoiceRefinementHomeScreen(),
+        routes: [
+          GoRoute(
+            path: 'baseline',
+            builder: (_, __) => const VoiceRefinementBaselineScreen(),
+          ),
+          GoRoute(
+            path: 'explore/:baselineId',
+            builder: (_, s) => VoiceRefinementExploreScreen(
+              baselineId: s.pathParameters['baselineId']!,
+            ),
+          ),
+          GoRoute(
+            path: 'activity/:activityId',
+            builder: (_, s) => VoiceRefinementActivityScreen(
+              activityId: s.pathParameters['activityId']!,
+              planId: s.uri.queryParameters['planId'] ?? '',
+              day: int.tryParse(s.uri.queryParameters['day'] ?? '1') ?? 1,
+              isCheckpoint: s.uri.queryParameters['checkpoint'] == '1',
+            ),
+          ),
+        ],
+      ),
+      GoRoute(
+        path: '/app/locked',
+        builder: (_, s) =>
+            LockedScreen(programId: s.uri.queryParameters['program']),
+      ),
       // Each branch keeps its own Navigator alive inside an IndexedStack, so
       // scroll position / form state / sub-navigation is preserved when you
       // switch tabs. Branch switches are instant (no transition); pushing a
@@ -109,20 +265,12 @@ GoRouter appRouter(Ref ref) {
         builder: (_, __, navigationShell) =>
             AppShell(navigationShell: navigationShell),
         branches: [
-          // 0 — Dashboard (home). `assess` is a drill-down kept within it.
+          // 0 — Dashboard (home)
           StatefulShellBranch(
             routes: [
               GoRoute(
                 path: '/app/dashboard',
                 builder: (_, __) => const DashboardLearnerScreen(),
-                routes: [
-                  GoRoute(
-                    path: 'assess',
-                    builder: (_, s) => AssessScreen(
-                      isBaseline: s.uri.queryParameters['baseline'] == '1',
-                    ),
-                  ),
-                ],
               ),
             ],
           ),
@@ -245,79 +393,7 @@ GoRouter appRouter(Ref ref) {
               ),
             ],
           ),
-          // 8 — AI Tutor (program)
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                  path: '/app/ai-tutor',
-                  builder: (_, __) => const AiTutorScreen()),
-            ],
-          ),
-          // 9 — IELTS (program, with sub-routes)
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: '/app/ielts',
-                builder: (_, __) => const IeltsHomeScreen(),
-                routes: [
-                  GoRoute(
-                      path: 'lessons/:lessonId',
-                      builder: (_, s) => IeltsLessonScreen(
-                          lessonId: s.pathParameters['lessonId']!)),
-                  GoRoute(
-                      path: 'practice/part-1',
-                      builder: (_, __) =>
-                          const IeltsPracticeScreen(part: IeltsPart.part1)),
-                  GoRoute(
-                      path: 'practice/part-2',
-                      builder: (_, __) =>
-                          const IeltsPracticeScreen(part: IeltsPart.part2)),
-                  GoRoute(
-                      path: 'practice/part-3',
-                      builder: (_, __) =>
-                          const IeltsPracticeScreen(part: IeltsPart.part3)),
-                  GoRoute(
-                      path: 'mock-test',
-                      builder: (_, __) => const IeltsMockTestScreen()),
-                  GoRoute(
-                      path: 'results/:attemptId',
-                      builder: (_, s) => IeltsResultScreen(
-                          attemptId: s.pathParameters['attemptId']!)),
-                ],
-              ),
-            ],
-          ),
-          // 10 — Interview Prep (program, with sub-routes)
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: '/app/interview-prep',
-                builder: (_, __) => const InterviewPrepHomeScreen(),
-                routes: [
-                  GoRoute(
-                      path: 'scenarios/new',
-                      builder: (_, __) => const NewScenarioScreen()),
-                  GoRoute(
-                      path: 'scenarios/:scenarioId',
-                      builder: (_, s) => ScenarioDetailScreen(
-                          id: s.pathParameters['scenarioId']!)),
-                  GoRoute(
-                      path: 'scenarios/:scenarioId/practice',
-                      builder: (_, s) => ScenarioPracticeScreen(
-                          id: s.pathParameters['scenarioId']!)),
-                  GoRoute(
-                      path: 'session-summary/:scenarioId',
-                      builder: (_, s) => SessionSummaryScreen(
-                          id: s.pathParameters['scenarioId']!)),
-                  GoRoute(
-                      path: 'attempts/:attemptId',
-                      builder: (_, s) => InterviewAttemptScreen(
-                          id: s.pathParameters['attemptId']!)),
-                ],
-              ),
-            ],
-          ),
-          // 11 — Onboarding
+          // 8 — Onboarding
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -325,7 +401,7 @@ GoRouter appRouter(Ref ref) {
                   builder: (_, __) => const OnboardingScreen()),
             ],
           ),
-          // 12 — Suspended
+          // 9 — Suspended
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -333,124 +409,12 @@ GoRouter appRouter(Ref ref) {
                   builder: (_, __) => const SuspendedScreen()),
             ],
           ),
-          // 13 — Locked
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: '/app/locked',
-                builder: (_, s) =>
-                    LockedScreen(programId: s.uri.queryParameters['program']),
-              ),
-            ],
-          ),
-          // 14 — Admin unavailable
+          // 10 — Admin unavailable
           StatefulShellBranch(
             routes: [
               GoRoute(
                   path: '/app/admin-unavailable',
                   builder: (_, __) => const AdminUnavailableScreen()),
-            ],
-          ),
-          // 15 — Voice Foundations (program, 7-day plan)
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: '/app/voice-foundations',
-                builder: (_, __) => const VoiceFoundationsHomeScreen(),
-                routes: [
-                  GoRoute(
-                    path: 'activity/:activityId',
-                    builder: (_, s) => VoiceFoundationsActivityScreen(
-                      activityId: s.pathParameters['activityId']!,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          // 16 — Daily Vocabulary (program)
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: '/app/vocabulary',
-                builder: (_, __) => const VocabularyHomeScreen(),
-                routes: [
-                  GoRoute(
-                    path: 'library',
-                    builder: (_, __) => const VocabularyLibraryScreen(),
-                  ),
-                  GoRoute(
-                    path: 'history',
-                    builder: (_, __) => const VocabularyHistoryScreen(),
-                  ),
-                  GoRoute(
-                    path: 'word/:word',
-                    builder: (_, s) => VocabularyWordScreen(
-                      word: Uri.decodeComponent(s.pathParameters['word']!),
-                      dailySetId: s.uri.queryParameters['setId'] ?? '',
-                    ),
-                  ),
-                  GoRoute(
-                    path: 'attempt',
-                    builder: (_, s) => VocabularyAttemptScreen(
-                      word: s.uri.queryParameters['word'] ?? '',
-                      kind: s.uri.queryParameters['kind'] ?? 'pronounce',
-                      dailySetId: s.uri.queryParameters['setId'] ?? '',
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          // 17 — Listening Comprehension (program)
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: '/app/listening',
-                builder: (_, __) => const ListeningHomeScreen(),
-                routes: [
-                  GoRoute(
-                    path: ':passageId',
-                    builder: (_, s) => ListeningRuntimeScreen(
-                      passageId: s.pathParameters['passageId']!,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          // 18 — Voice Refinement (program, 14-day plan)
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: '/app/voice-refinement',
-                builder: (_, __) => const VoiceRefinementHomeScreen(),
-                routes: [
-                  GoRoute(
-                    path: 'baseline',
-                    builder: (_, __) =>
-                        const VoiceRefinementBaselineScreen(),
-                  ),
-                  GoRoute(
-                    path: 'explore/:baselineId',
-                    builder: (_, s) => VoiceRefinementExploreScreen(
-                      baselineId: s.pathParameters['baselineId']!,
-                    ),
-                  ),
-                  GoRoute(
-                    path: 'activity/:activityId',
-                    builder: (_, s) => VoiceRefinementActivityScreen(
-                      activityId: s.pathParameters['activityId']!,
-                      planId: s.uri.queryParameters['planId'] ?? '',
-                      day: int.tryParse(
-                              s.uri.queryParameters['day'] ?? '1') ??
-                          1,
-                      isCheckpoint:
-                          s.uri.queryParameters['checkpoint'] == '1',
-                    ),
-                  ),
-                ],
-              ),
             ],
           ),
         ],

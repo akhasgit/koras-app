@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../../../core/errors/app_error.dart';
@@ -44,7 +45,10 @@ class AiTutorScreen extends ConsumerWidget {
             AiTutorReportView(report: report),
             const SizedBox(height: 24),
             KorasButton.primary(
-              onPressed: notifier.reset,
+              onPressed: () {
+                notifier.reset();
+                if (context.canPop()) context.pop();
+              },
               child: const Text('Done'),
             ),
             const SizedBox(height: 24),
@@ -165,7 +169,15 @@ class _LivePanel extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
-            const SizedBox(height: 24),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: IconButton(
+                icon: const Icon(Icons.close),
+                tooltip: 'Close',
+                onPressed: () => context.pop(),
+              ),
+            ),
+            const SizedBox(height: 8),
             const VoiceOrb(label: 'Listening…'),
             const SizedBox(height: 16),
             Expanded(
@@ -219,12 +231,18 @@ class _ErrorView extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               KorasButton.secondary(
-                onPressed: onRetry,
+                onPressed: () {
+                  onRetry();
+                  if (context.canPop()) context.pop();
+                },
                 child: const Text('Back'),
               ),
             ] else
               KorasButton.primary(
-                onPressed: onRetry,
+                onPressed: () {
+                  onRetry();
+                  if (context.canPop()) context.pop();
+                },
                 child: const Text('Back'),
               ),
           ],

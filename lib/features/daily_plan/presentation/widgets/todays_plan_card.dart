@@ -217,8 +217,7 @@ class _NoPlanCard extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           KorasButton.primary(
-            onPressed: () => Navigator.of(context)
-                .pushNamed('/app/dashboard/assess?baseline=1'),
+            onPressed: () => context.push('/app/assess?baseline=1'),
             child: const Text('Start assessment'),
           ),
         ],
@@ -284,7 +283,7 @@ class _HeroItem extends StatelessWidget {
                 label: 'Start',
                 icon: LucideIcons.mic,
                 filled: true,
-                onTap: () => context.go(item.route!),
+                onTap: () => context.push(item.route!),
               ),
               const SizedBox(width: 8),
             ],
@@ -306,7 +305,7 @@ class _HeroItem extends StatelessWidget {
               _ActionButton(
                 label: 'Preview',
                 icon: LucideIcons.fileText,
-                onTap: item.route == null ? null : () => context.go(item.route!),
+                onTap: item.route == null ? null : () => context.push(item.route!),
               ),
             ],
           ],
@@ -381,7 +380,7 @@ class _PlanItemTile extends StatelessWidget {
                     label: 'Start',
                     icon: LucideIcons.arrowRight,
                     filled: true,
-                    onTap: () => context.go(item.route!),
+                    onTap: () => context.push(item.route!),
                   ),
                   const SizedBox(width: 8),
                 ],

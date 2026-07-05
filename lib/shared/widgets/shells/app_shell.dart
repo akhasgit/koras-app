@@ -55,7 +55,7 @@ class AppShell extends ConsumerWidget {
                     selectedIndex: _selectedTab(tabs),
                     onSelect: (i) => _onTabSelected(tabs, i),
                     fabIcon: fab?.icon,
-                    onFabTap: fab == null ? null : () => context.go(fab.route),
+                    onFabTap: fab == null ? null : () => context.push(fab.route),
                   ),
           ),
         ],

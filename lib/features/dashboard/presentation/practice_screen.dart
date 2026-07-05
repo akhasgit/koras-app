@@ -14,7 +14,6 @@ import '../../../shared/widgets/koras_pill.dart';
 import '../../daily_plan/data/daily_plan.dart';
 import '../../daily_plan/data/daily_plan_repository.dart';
 import '../../programs/domain/program_catalog.dart';
-import '../../programs/presentation/program_access_providers.dart';
 
 // Duration labels per program — shown under each card.
 const _kDuration = <String, String>{
@@ -42,7 +41,6 @@ class PracticeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(currentProfileProvider).valueOrNull;
-    final accessible = ref.watch(accessibleProgramIdsProvider).valueOrNull;
     final planAsync = ref.watch(currentDailyPlanProvider);
 
     final statusBarH = MediaQuery.paddingOf(context).top;
@@ -84,7 +82,6 @@ class PracticeScreen extends ConsumerWidget {
     return RefreshIndicator(
       onRefresh: () async {
         ref.invalidate(currentDailyPlanProvider);
-        ref.invalidate(accessibleProgramIdsProvider);
       },
       child: ListView(
         padding: EdgeInsets.only(top: statusBarH + 8, bottom: 110),
@@ -112,10 +109,7 @@ class PracticeScreen extends ConsumerWidget {
                 ],
 
                 // ── Live programs grid ────────────────────────────────────
-                _ProgramGrid(
-                  programs: gridPrograms,
-                  accessible: accessible,
-                ),
+                _ProgramGrid(programs: gridPrograms),
 
                 // ── Coming soon ───────────────────────────────────────────
                 if (comingPrograms.isNotEmpty) ...[
@@ -128,7 +122,6 @@ class PracticeScreen extends ConsumerWidget {
                   const SizedBox(height: 12),
                   _ProgramGrid(
                     programs: comingPrograms,
-                    accessible: const {},
                     dimmed: true,
                   ),
                 ],
@@ -155,7 +148,7 @@ class _ContinueCard extends StatelessWidget {
     final k = context.koras;
     return GestureDetector(
       onTap: () {
-        if (program.route != null) context.go(program.route!);
+        if (program.route != null) context.push(program.route!);
       },
       child: GlassCard(
         strong: true,
@@ -268,11 +261,9 @@ class _ProgressRingPainter extends CustomPainter {
 class _ProgramGrid extends StatelessWidget {
   const _ProgramGrid({
     required this.programs,
-    required this.accessible,
     this.dimmed = false,
   });
   final List<Program> programs;
-  final Set<String>? accessible;
   final bool dimmed;
 
   @override
@@ -288,10 +279,7 @@ class _ProgramGrid extends StatelessWidget {
       ),
       itemCount: programs.length,
       itemBuilder: (context, i) {
-        final p = programs[i];
-        final locked = accessible != null && !accessible!.contains(p.id);
-        return _ProgramTile(
-            program: p, locked: locked || dimmed, dimmed: dimmed);
+        return _ProgramTile(program: programs[i], dimmed: dimmed);
       },
     );
   }
@@ -300,26 +288,20 @@ class _ProgramGrid extends StatelessWidget {
 class _ProgramTile extends StatelessWidget {
   const _ProgramTile({
     required this.program,
-    required this.locked,
     required this.dimmed,
   });
   final Program program;
-  final bool locked;
   final bool dimmed;
 
   @override
   Widget build(BuildContext context) {
     final k = context.koras;
-    final canTap = !locked && !dimmed && program.route != null;
+    final canTap = !dimmed && program.route != null;
 
     return GestureDetector(
       onTap: () {
         if (canTap) {
-          context.go(program.route!);
-        } else if (dimmed) {
-          // no-op for coming soon
-        } else {
-          context.go('/app/locked?program=${program.id}');
+          context.push(program.route!);
         }
       },
       child: GlassCard(
@@ -362,8 +344,6 @@ class _ProgramTile extends StatelessWidget {
               children: [
                 if (dimmed)
                   KorasPill(label: 'Soon', tone: PillTone.glass)
-                else if (locked)
-                  KorasPill(label: 'Locked', tone: PillTone.warn)
                 else
                   Text(
                     _kDuration[program.id] ?? '',

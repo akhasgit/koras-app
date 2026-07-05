@@ -23,15 +23,17 @@ class OnboardingRepository {
   }) async {
     final uid = _sb.auth.currentUser!.id;
     try {
-      await _sb.from('onboarding_responses').upsert({
-        'user_id': uid,
-        'goal': goals.isNotEmpty ? goals.first : null,
-        'goals': goals,
-        'background': background,
-        'biggest_challenge': biggestChallenge,
-        'interested_program': interestedProgram,
-        'completed_at': DateTime.now().toUtc().toIso8601String(),
-      });
+      await _sb.from('onboarding_responses').upsert(
+        {
+          'user_id': uid,
+          'goal': goals.isNotEmpty ? goals.first : null,
+          'background': background,
+          'biggest_challenge': biggestChallenge,
+          'interested_program': interestedProgram,
+          'completed_at': DateTime.now().toUtc().toIso8601String(),
+        },
+        onConflict: 'user_id',
+      );
       await _sb
           .from('profiles')
           .update({'onboarding_completed': true}).eq('id', uid);

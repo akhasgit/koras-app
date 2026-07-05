@@ -83,11 +83,26 @@ AppError mapError(Object error) {
   };
 }
 
+/// User-facing copy for Supabase auth failures (sign-in, sign-up, reset).
+String prettifyAuthError(String message) {
+  final lower = message.toLowerCase();
+  if (lower.contains('invalid login')) return 'Wrong email or password.';
+  if (lower.contains('email not confirmed')) {
+    return 'Please confirm your email — check your inbox for the link.';
+  }
+  if (lower.contains('already registered') ||
+      lower.contains('already been registered')) {
+    return 'That email already has an account. Try signing in instead.';
+  }
+  if (lower.contains('not signed in')) return 'Please sign in again.';
+  return message;
+}
+
 /// User-facing copy for an error.
 String errorToMessage(Object error) {
   final e = error is AppError ? error : mapError(error);
   return switch (e) {
-    AuthError() => 'Please sign in again.',
+    AuthError(message: final m) => prettifyAuthError(m),
     NetworkError() => 'Network problem. Check your connection and retry.',
     NotFoundError() => 'We couldn\'t find that.',
     PermissionError(message: 'Microphone permission denied') =>
