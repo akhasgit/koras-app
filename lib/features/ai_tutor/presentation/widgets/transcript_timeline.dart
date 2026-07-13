@@ -42,9 +42,9 @@ class _Bubble extends StatelessWidget {
         constraints: const BoxConstraints(maxWidth: 320),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: isUser ? k.emberSoft : k.paperWarm,
+          color: isUser ? k.emberSoft : k.glassFillStrong,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: k.line),
+          border: Border.all(color: k.glassBorder, width: 0.75),
         ),
         child: Text(turn.transcript),
       ),

@@ -11,6 +11,7 @@ import '../../../shared/widgets/avatar_menu_button.dart';
 import '../../../shared/widgets/glass/glass_card.dart';
 import '../../../shared/widgets/koras_header.dart';
 import '../../../shared/widgets/koras_pill.dart';
+import '../../../shared/widgets/koras_progress_arc.dart';
 import '../../daily_plan/data/daily_plan.dart';
 import '../../daily_plan/data/daily_plan_repository.dart';
 import '../../programs/domain/program_catalog.dart';
@@ -155,26 +156,11 @@ class _ContinueCard extends StatelessWidget {
         child: Row(
           children: [
             // Progress ring
-            SizedBox(
-              width: 60,
-              height: 60,
-              child: CustomPaint(
-                painter: _ProgressRingPainter(
-                  fraction: 0.45, // placeholder — no server progress yet
-                  track: k.line,
-                  sweep: k.ember,
-                ),
-                child: Center(
-                  child: Text(
-                    '45%',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: k.accentDeep,
-                    ),
-                  ),
-                ),
-              ),
+            KorasProgressArc(
+              value: 45, // placeholder — no server progress yet
+              size: 56,
+              strokeWidth: 6,
+              child: Text('45%', style: korasSerif(14, color: k.ink900)),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -204,54 +190,22 @@ class _ContinueCard extends StatelessWidget {
                 ],
               ),
             ),
+            // Glass play circle (handoff: Glass strong, radius 999, 44px).
             Container(
-              width: 36,
-              height: 36,
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
-                color: k.ember.withValues(alpha: 0.14),
+                color: k.glassFillStrong,
                 shape: BoxShape.circle,
+                border: Border.all(color: k.glassBorder, width: 0.75),
               ),
-              child:
-                  Icon(LucideIcons.play, size: 16, color: k.accentDeep),
+              child: Icon(LucideIcons.play, size: 18, color: k.ember),
             ),
           ],
         ),
       ),
     );
   }
-}
-
-class _ProgressRingPainter extends CustomPainter {
-  const _ProgressRingPainter({
-    required this.fraction,
-    required this.track,
-    required this.sweep,
-  });
-  final double fraction;
-  final Color track, sweep;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    const stroke = 5.0;
-    final center = size.center(Offset.zero);
-    final radius = (size.shortestSide - stroke) / 2;
-    canvas.drawCircle(
-        center, radius, Paint()..color = track..style = PaintingStyle.stroke..strokeWidth = stroke);
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius),
-      -3.14159 / 2,
-      2 * 3.14159 * fraction,
-      false,
-      Paint()
-        ..color = sweep
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = stroke
-        ..strokeCap = StrokeCap.round,
-    );
-  }
-
-  @override
-  bool shouldRepaint(_ProgressRingPainter old) => old.fraction != fraction;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -343,7 +297,7 @@ class _ProgramTile extends StatelessWidget {
             Row(
               children: [
                 if (dimmed)
-                  KorasPill(label: 'Soon', tone: PillTone.glass)
+                  const KorasPill(label: 'Soon', tone: PillTone.glass)
                 else
                   Text(
                     _kDuration[program.id] ?? '',

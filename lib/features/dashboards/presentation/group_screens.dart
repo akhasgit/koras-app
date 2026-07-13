@@ -6,12 +6,16 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/errors/app_error.dart';
 import '../../../core/theme/koras_theme.dart';
+import '../../../core/theme/typography.dart';
 import '../../../shared/providers/managed_groups.dart';
 import '../../../shared/widgets/feature_placeholder.dart';
+import '../../../shared/widgets/glass_icon_button.dart';
+import '../../../shared/widgets/koras_avatar.dart';
 import '../../../shared/widgets/koras_button.dart';
 import '../../../shared/widgets/koras_card.dart';
 import '../../../shared/widgets/koras_error.dart';
 import '../../../shared/widgets/koras_loading.dart';
+import '../../../shared/widgets/koras_pill.dart';
 import '../../../shared/widgets/koras_screen.dart';
 import '../../../shared/widgets/koras_text_field.dart';
 import '../../learner_insights/data/learner_insights_repository.dart';
@@ -25,11 +29,13 @@ class DashboardGroupScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final groups = ref.watch(managedGroupsProvider);
+    final k = context.koras;
     return KorasScreen(
+      kicker: 'Your classes',
       title: 'Classes',
       actions: [
-        IconButton(
-          icon: const Icon(LucideIcons.plus),
+        GlassIconButton(
+          icon: LucideIcons.plus,
           onPressed: () => context.go('/app/group/new'),
         ),
       ],
@@ -51,7 +57,17 @@ class DashboardGroupScreen extends ConsumerWidget {
                   onTap: () => context.go('/app/group/${g.id}'),
                   child: Row(
                     children: [
-                      const Icon(LucideIcons.users),
+                      Container(
+                        width: 40,
+                        height: 40,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: k.ember.withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(LucideIcons.users,
+                            size: 20, color: k.accentDeep),
+                      ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
@@ -61,11 +77,14 @@ class DashboardGroupScreen extends ConsumerWidget {
                                 style: Theme.of(context).textTheme.titleMedium),
                             if (g.description != null)
                               Text(g.description!,
-                                  style: Theme.of(context).textTheme.bodySmall),
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.copyWith(color: k.muted)),
                           ],
                         ),
                       ),
-                      const Icon(LucideIcons.chevronRight, size: 18),
+                      Icon(LucideIcons.chevronRight, size: 18, color: k.muted),
                     ],
                   ),
                 ),
@@ -162,11 +181,12 @@ class GroupDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final group = ref.watch(groupByIdProvider(id));
     final students = ref.watch(groupStudentsProvider(id));
+    final k = context.koras;
     return KorasScreen(
       title: 'Class',
       actions: [
-        IconButton(
-          icon: const Icon(LucideIcons.settings),
+        GlassIconButton(
+          icon: LucideIcons.settings,
           onPressed: () => context.go('/app/group/$id/settings'),
         ),
       ],
@@ -181,11 +201,14 @@ class GroupDetailScreen extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(g.name,
-                          style: Theme.of(context).textTheme.titleLarge),
+                      Text(g.name, style: korasSerifItalic(22, color: k.ink900)),
                       if (g.description != null) ...[
                         const SizedBox(height: 6),
-                        Text(g.description!),
+                        Text(g.description!,
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(color: k.ink700)),
                       ],
                     ],
                   ),
@@ -212,8 +235,14 @@ class GroupDetailScreen extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: 20),
-        Text('Roster', style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 8),
+        Text(
+          'ROSTER',
+          style: Theme.of(context)
+              .textTheme
+              .labelSmall
+              ?.copyWith(color: k.muted, letterSpacing: 1.4),
+        ),
+        const SizedBox(height: 10),
         students.when(
           loading: () => const KorasLoading(),
           error: (e, _) => KorasError(message: errorToMessage(e)),
@@ -226,14 +255,17 @@ class GroupDetailScreen extends ConsumerWidget {
                   children: [
                     for (final s in list) ...[
                       KorasCard(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
                         onTap: () => context
                             .go('/app/group/$id/students/${s.id}'),
                         child: Row(
                           children: [
-                            const Icon(LucideIcons.user, size: 18),
+                            KorasAvatar(name: s.fullName ?? s.email, size: 38),
                             const SizedBox(width: 12),
                             Expanded(child: Text(s.fullName ?? s.email)),
-                            const Icon(LucideIcons.chevronRight, size: 18),
+                            Icon(LucideIcons.chevronRight,
+                                size: 18, color: k.muted),
                           ],
                         ),
                       ),
@@ -270,11 +302,12 @@ class GroupStudentsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final students = ref.watch(groupStudentsProvider(id));
+    final k = context.koras;
     return KorasScreen(
       title: 'Students',
       actions: [
-        IconButton(
-          icon: const Icon(LucideIcons.upload),
+        GlassIconButton(
+          icon: LucideIcons.upload,
           onPressed: () =>
               context.go('/app/group/$id/students/bulk-import'),
         ),
@@ -289,9 +322,19 @@ class GroupStudentsScreen extends ConsumerWidget {
                   const SizedBox(height: 8),
                   for (final s in list) ...[
                     KorasCard(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
                       onTap: () => context
                           .go('/app/group/$id/students/${s.id}'),
-                      child: Text(s.fullName ?? s.email),
+                      child: Row(
+                        children: [
+                          KorasAvatar(name: s.fullName ?? s.email, size: 38),
+                          const SizedBox(width: 12),
+                          Expanded(child: Text(s.fullName ?? s.email)),
+                          Icon(LucideIcons.chevronRight,
+                              size: 18, color: k.muted),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 10),
                   ],
@@ -323,6 +366,7 @@ class StudentDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final insights = ref.watch(studentInsightsProvider(userId));
+    final k = context.koras;
     return KorasScreen(
       title: 'Student',
       child: insights.when(
@@ -332,7 +376,63 @@ class StudentDetailScreen extends ConsumerWidget {
             ? const FeaturePlaceholder(title: 'No data yet')
             : Padding(
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                child: ProgressCard(insights: data),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    ProgressCard(insights: data),
+                    if (data.strengthsTags.isNotEmpty ||
+                        data.weaknessesTags.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      KorasCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (data.strengthsTags.isNotEmpty) ...[
+                              Text(
+                                'STRENGTHS',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .labelSmall
+                                    ?.copyWith(
+                                        color: k.muted, letterSpacing: 1.4),
+                              ),
+                              const SizedBox(height: 8),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: [
+                                  for (final t in data.strengthsTags)
+                                    KorasPill(
+                                        label: t, tone: PillTone.success),
+                                ],
+                              ),
+                            ],
+                            if (data.weaknessesTags.isNotEmpty) ...[
+                              const SizedBox(height: 14),
+                              Text(
+                                'FOCUS AREAS',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .labelSmall
+                                    ?.copyWith(
+                                        color: k.muted, letterSpacing: 1.4),
+                              ),
+                              const SizedBox(height: 8),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: [
+                                  for (final t in data.weaknessesTags)
+                                    KorasPill(label: t, tone: PillTone.warn),
+                                ],
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ),
       ),
     );

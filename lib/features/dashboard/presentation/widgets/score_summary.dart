@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/koras_theme.dart';
+import '../../../../core/theme/typography.dart';
 import '../../../../shared/widgets/koras_card.dart';
 import '../../../../shared/widgets/koras_score_bar.dart';
 import '../../../../shared/widgets/koras_score_ring.dart';
@@ -17,7 +19,8 @@ class ScoreSummary extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Your voice', style: Theme.of(context).textTheme.titleLarge),
+          Text('Your voice',
+              style: korasSerifItalic(20, color: context.koras.ink900)),
           const SizedBox(height: 16),
           Center(child: KorasScoreRing(value: s.overall, label: 'Overall')),
           const SizedBox(height: 20),

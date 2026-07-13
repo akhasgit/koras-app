@@ -1,6 +1,3 @@
-import 'dart:math' as math;
-import 'dart:ui' as ui;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -18,6 +15,7 @@ import '../../../shared/widgets/koras_error.dart';
 import '../../../shared/widgets/koras_header.dart';
 import '../../../shared/widgets/koras_loading.dart';
 import '../../../shared/widgets/koras_pill.dart';
+import '../../../shared/widgets/koras_radar.dart';
 import '../../../shared/widgets/koras_score_ring.dart';
 import '../../learner_insights/data/learner_insights.dart';
 import '../../learner_insights/data/learner_insights_repository.dart';
@@ -192,7 +190,7 @@ class _ScoreHeroCard extends StatelessWidget {
   /// Returns just the first sentence of feedback for the compact card.
   String _firstSentence(String text) {
     final dot = text.indexOf('. ');
-    if (dot > 0 && dot < text.length - 2) return '${text.substring(0, dot + 1)}';
+    if (dot > 0 && dot < text.length - 2) return text.substring(0, dot + 1);
     return text.length > 120 ? '${text.substring(0, 120)}…' : text;
   }
 }
@@ -246,23 +244,18 @@ class _DimensionsCard extends StatelessWidget {
     // top=Pitch, upper-right=Loudness(resonance), lower-right=Clarity,
     // lower-left=Pace, upper-left=Tone(confidence)
     final dims = [
-      _Dim('PITCH', scores.pitch),
-      _Dim('LOUD', scores.resonance),
-      _Dim('CLAR', scores.clarity),
-      _Dim('PACE', scores.pace),
-      _Dim('TONE', scores.confidence),
+      KorasRadarDim('PITCH', scores.pitch),
+      KorasRadarDim('LOUD', scores.resonance),
+      KorasRadarDim('CLAR', scores.clarity),
+      KorasRadarDim('PACE', scores.pace),
+      KorasRadarDim('TONE', scores.confidence),
     ];
 
     return GlassCard(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Radar chart
-          SizedBox(
-            width: 130,
-            height: 130,
-            child: _RadarChart(dims: dims),
-          ),
+          KorasRadar(dims: dims, size: 130),
           const SizedBox(width: 16),
           // Dimension bars — full names
           Expanded(
@@ -288,12 +281,6 @@ class _DimensionsCard extends StatelessWidget {
       ),
     );
   }
-}
-
-class _Dim {
-  const _Dim(this.label, this.value);
-  final String label;
-  final int value; // 0–100
 }
 
 class _DimBar extends StatelessWidget {
@@ -341,139 +328,6 @@ class _DimBar extends StatelessWidget {
       ],
     );
   }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Radar / spider chart
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _RadarChart extends StatelessWidget {
-  const _RadarChart({required this.dims});
-  final List<_Dim> dims; // exactly 5
-
-  @override
-  Widget build(BuildContext context) {
-    final k = context.koras;
-    return CustomPaint(
-      painter: _RadarPainter(
-        values: dims.map((d) => d.value / 100.0).toList(),
-        labels: dims.map((d) => d.label).toList(),
-        fill: k.ember.withValues(alpha: 0.18),
-        stroke: k.ember,
-        grid: k.line,
-        labelColor: k.muted,
-      ),
-    );
-  }
-}
-
-class _RadarPainter extends CustomPainter {
-  _RadarPainter({
-    required this.values,
-    required this.labels,
-    required this.fill,
-    required this.stroke,
-    required this.grid,
-    required this.labelColor,
-  });
-
-  final List<double> values;
-  final List<String> labels;
-  final Color fill, stroke, grid, labelColor;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final n = values.length;
-    final cx = size.width / 2;
-    final cy = size.height / 2;
-    // Leave room for labels around the edge
-    const labelPad = 18.0;
-    final r = (size.shortestSide / 2) - labelPad;
-
-    // Angle for vertex i: start at top (-π/2), go clockwise
-    double angle(int i) => -math.pi / 2 + (2 * math.pi / n) * i;
-
-    Offset vertex(int i, double fraction) {
-      final a = angle(i);
-      return Offset(cx + r * fraction * math.cos(a),
-          cy + r * fraction * math.sin(a));
-    }
-
-    // Draw grid rings (3 rings at 33%, 66%, 100%)
-    final gridPaint = Paint()
-      ..color = grid
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 0.8;
-
-    for (final frac in [0.33, 0.66, 1.0]) {
-      final path = Path();
-      for (var i = 0; i < n; i++) {
-        final v = vertex(i, frac);
-        i == 0 ? path.moveTo(v.dx, v.dy) : path.lineTo(v.dx, v.dy);
-      }
-      path.close();
-      canvas.drawPath(path, gridPaint);
-    }
-
-    // Draw spoke lines from centre to each vertex
-    final spokePaint = Paint()
-      ..color = grid
-      ..strokeWidth = 0.8;
-    for (var i = 0; i < n; i++) {
-      final v = vertex(i, 1.0);
-      canvas.drawLine(Offset(cx, cy), v, spokePaint);
-    }
-
-    // Draw filled polygon (data)
-    final fillPath = Path();
-    for (var i = 0; i < n; i++) {
-      final v = vertex(i, values[i].clamp(0.0, 1.0));
-      i == 0 ? fillPath.moveTo(v.dx, v.dy) : fillPath.lineTo(v.dx, v.dy);
-    }
-    fillPath.close();
-    canvas.drawPath(fillPath, Paint()..color = fill);
-    canvas.drawPath(
-      fillPath,
-      Paint()
-        ..color = stroke
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5
-        ..strokeJoin = StrokeJoin.round,
-    );
-
-    // Draw vertex dots
-    final dotPaint = Paint()..color = stroke;
-    for (var i = 0; i < n; i++) {
-      final v = vertex(i, values[i].clamp(0.0, 1.0));
-      canvas.drawCircle(v, 2.5, dotPaint);
-    }
-
-    // Draw labels at the tips
-    for (var i = 0; i < n; i++) {
-      final a = angle(i);
-      // Push label a bit further out than the grid edge
-      final lx = cx + (r + labelPad * 0.55) * math.cos(a);
-      final ly = cy + (r + labelPad * 0.55) * math.sin(a);
-
-      final tp = TextPainter(
-        text: TextSpan(
-          text: labels[i],
-          style: TextStyle(
-            color: labelColor,
-            fontSize: 8.5,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.5,
-          ),
-        ),
-        textDirection: ui.TextDirection.ltr,
-      )..layout();
-
-      tp.paint(canvas, Offset(lx - tp.width / 2, ly - tp.height / 2));
-    }
-  }
-
-  @override
-  bool shouldRepaint(_RadarPainter old) => old.values != values;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

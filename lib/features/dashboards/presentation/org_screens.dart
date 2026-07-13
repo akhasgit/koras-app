@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/errors/app_error.dart';
+import '../../../core/theme/koras_theme.dart';
+import '../../../core/theme/typography.dart';
 import '../../../shared/providers/current_org.dart';
 import '../../../shared/widgets/feature_placeholder.dart';
 import '../../../shared/widgets/koras_button.dart';
@@ -36,9 +38,16 @@ class DashboardOrgScreen extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(o.name,
-                          style: Theme.of(context).textTheme.titleLarge),
+                          style: korasSerifItalic(22,
+                              color: context.koras.ink900)),
                       const SizedBox(height: 4),
-                      Text('Type: ${o.type.name} · Status: ${o.status.name}'),
+                      Text(
+                        '${o.type.name} · ${o.status.name}',
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodySmall
+                            ?.copyWith(color: context.koras.muted),
+                      ),
                     ],
                   ),
                 ),
@@ -89,16 +98,30 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final k = context.koras;
     return KorasCard(
       onTap: onTap,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 20),
-          const SizedBox(height: 8),
+          Container(
+            width: 36,
+            height: 36,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: k.ember.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(11),
+            ),
+            child: Icon(icon, size: 18, color: k.accentDeep),
+          ),
+          const SizedBox(height: 10),
           Text(value?.toString() ?? '—',
-              style: Theme.of(context).textTheme.headlineSmall),
-          Text(label, style: Theme.of(context).textTheme.bodySmall),
+              style: korasSerif(24, color: k.ink900)),
+          Text(label,
+              style: Theme.of(context)
+                  .textTheme
+                  .bodySmall
+                  ?.copyWith(color: k.muted)),
         ],
       ),
     );

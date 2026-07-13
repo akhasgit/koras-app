@@ -5,6 +5,7 @@ import 'package:permission_handler/permission_handler.dart';
 
 import '../../../core/errors/app_error.dart';
 import '../../../core/theme/koras_theme.dart';
+import '../../../shared/widgets/glass/mesh_background.dart';
 import '../../../shared/widgets/koras_button.dart';
 import '../../../shared/widgets/koras_card.dart';
 import '../../../shared/widgets/koras_screen.dart';
@@ -164,17 +165,29 @@ class _LivePanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final k = context.koras;
-    return Scaffold(
-      backgroundColor: k.cream,
-      body: SafeArea(
+    return MeshBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: SafeArea(
         child: Column(
           children: [
             Align(
               alignment: Alignment.centerLeft,
-              child: IconButton(
-                icon: const Icon(Icons.close),
-                tooltip: 'Close',
-                onPressed: () => context.pop(),
+              child: Padding(
+                padding: const EdgeInsets.only(left: 16, top: 4),
+                child: GestureDetector(
+                  onTap: () => context.pop(),
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: k.glassFillStrong,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: k.glassBorder, width: 0.75),
+                    ),
+                    child: Icon(Icons.close, size: 20, color: k.ink900),
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 8),
@@ -196,12 +209,20 @@ class _LivePanel extends StatelessWidget {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: k.danger,
+                    boxShadow: [
+                      BoxShadow(
+                        color: k.danger.withValues(alpha: 0.35),
+                        blurRadius: 24,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
                   ),
                   child: Icon(Icons.stop_rounded, color: k.paper, size: 32),
                 ),
               ),
             ),
           ],
+        ),
         ),
       ),
     );

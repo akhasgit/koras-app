@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/theme/koras_theme.dart';
+import '../../../../core/theme/typography.dart';
 import '../../../../shared/models/enums.dart';
 import '../../../../shared/widgets/koras_badge.dart';
 import '../../../../shared/widgets/koras_card.dart';
@@ -27,7 +28,7 @@ class ProgressCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Progress', style: Theme.of(context).textTheme.titleLarge),
+              Text('Progress', style: korasSerifItalic(19, color: k.ink900)),
               KorasBadge(label: trendLabel, tone: trendTone),
             ],
           ),

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../../core/theme/koras_theme.dart';
 import '../../../shared/widgets/koras_button.dart';
 import '../../../shared/widgets/koras_screen.dart';
 import '../../programs/domain/program_catalog.dart';
@@ -21,13 +22,28 @@ class LockedScreen extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         const SizedBox(height: 40),
-        const Icon(LucideIcons.lock, size: 48),
-        const SizedBox(height: 16),
+        Container(
+          width: 88,
+          height: 88,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: context.koras.glassFillStrong,
+            borderRadius: BorderRadius.circular(26),
+            border:
+                Border.all(color: context.koras.glassBorder, width: 0.75),
+          ),
+          child:
+              Icon(LucideIcons.lock, size: 36, color: context.koras.muted),
+        ),
+        const SizedBox(height: 20),
         Text(
           program?.description ??
               'This program isn\'t available for your account yet.',
           textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.bodyLarge,
+          style: Theme.of(context)
+              .textTheme
+              .bodyLarge
+              ?.copyWith(color: context.koras.ink700),
         ),
         const SizedBox(height: 24),
         KorasButton.secondary(

@@ -4,12 +4,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+
 import '../../../core/errors/app_error.dart';
 import '../../../core/theme/koras_theme.dart';
+import '../../../core/theme/typography.dart';
 import '../../../shared/widgets/audio/koras_audio_player.dart';
 import '../../../shared/widgets/audio/voice_recorder.dart';
 import '../../../shared/widgets/koras_button.dart';
 import '../../../shared/widgets/koras_card.dart';
+import '../../../shared/widgets/koras_pill.dart';
 import '../../../shared/widgets/koras_screen.dart';
 import '../../dashboards/presentation/learner_home_provider.dart';
 import '../data/assessments_repository.dart';
@@ -85,25 +89,70 @@ class AssessScreen extends HookConsumerWidget {
   }
 }
 
+/// Handoff `LAnalyzing` — glass tile with an ember bloom + serif status copy.
 class _Analysing extends StatelessWidget {
   const _Analysing();
 
   @override
   Widget build(BuildContext context) {
+    final k = context.koras;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 64),
+      padding: const EdgeInsets.symmetric(vertical: 48),
       child: Column(
         children: [
-          const CircularProgressIndicator(),
-          const SizedBox(height: 24),
-          Text(
-            'Analysing your voice…',
-            style: Theme.of(context).textTheme.titleMedium,
+          Container(
+            width: 150,
+            height: 150,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: k.glassFill,
+              borderRadius: BorderRadius.circular(34),
+              border: Border.all(color: k.glassBorder, width: 0.75),
+              boxShadow: [
+                BoxShadow(
+                  color: k.ember.withValues(alpha: 0.25),
+                  blurRadius: 44,
+                  spreadRadius: -4,
+                ),
+              ],
+            ),
+            child: SizedBox(
+              width: 44,
+              height: 44,
+              child: CircularProgressIndicator(strokeWidth: 3, color: k.ember),
+            ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            'This can take a few seconds.',
-            style: Theme.of(context).textTheme.bodySmall,
+          const SizedBox(height: 26),
+          Text('Analyzing your read…',
+              style: korasSerifItalic(26, color: k.ink900)),
+          const SizedBox(height: 10),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 280),
+            child: Text(
+              'Measuring pitch, pace, clarity, loudness and tonality. Usually 5–15 seconds.',
+              textAlign: TextAlign.center,
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyMedium
+                  ?.copyWith(color: k.muted, height: 1.5),
+            ),
+          ),
+          const SizedBox(height: 22),
+          const Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            alignment: WrapAlignment.center,
+            children: [
+              KorasPill(
+                  label: 'Transcribed',
+                  tone: PillTone.success,
+                  icon: LucideIcons.check),
+              KorasPill(
+                  label: 'Scoring',
+                  tone: PillTone.accent,
+                  icon: LucideIcons.sparkles),
+              KorasPill(label: 'Coach notes', tone: PillTone.glass),
+            ],
           ),
         ],
       ),
