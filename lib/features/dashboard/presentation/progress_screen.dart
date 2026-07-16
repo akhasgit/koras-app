@@ -50,9 +50,18 @@ class ProgressScreen extends ConsumerWidget {
             kicker: 'VOICE',
             title: 'Your voice',
             italic: true,
-            trailing: profile != null
-                ? AvatarMenuButton(profile: profile)
-                : null,
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(LucideIcons.clock),
+                  color: context.koras.ink700,
+                  tooltip: 'History',
+                  onPressed: () => context.push('/app/voice-history'),
+                ),
+                if (profile != null) AvatarMenuButton(profile: profile),
+              ],
+            ),
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),

@@ -13,6 +13,7 @@ import '../../features/dashboard/presentation/assess_screen.dart';
 import '../../features/dashboard/presentation/assessment_history_screen.dart';
 import '../../features/dashboard/presentation/practice_screen.dart';
 import '../../features/dashboard/presentation/progress_screen.dart';
+import '../../features/dashboard/presentation/voice_history_screen.dart';
 import '../../features/dashboards/presentation/admin_unavailable_screen.dart';
 import '../../features/dashboards/presentation/group_screens.dart';
 import '../../features/dashboards/presentation/learner_home_screen.dart';
@@ -29,6 +30,11 @@ import '../../features/inbox/presentation/inbox_screen.dart';
 import '../../features/onboarding/presentation/onboarding_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/programs/presentation/program_access_providers.dart';
+import '../../features/reading/data/reading_models.dart';
+import '../../features/reading/presentation/reading_lesson_screen.dart';
+import '../../features/reading/presentation/reading_path_screen.dart';
+import '../../features/reading/presentation/reading_read_aloud_screen.dart';
+import '../../features/reading/presentation/reading_results_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/vocabulary/presentation/vocabulary_attempt_screen.dart';
 import '../../features/vocabulary/presentation/vocabulary_home_screen.dart';
@@ -59,6 +65,7 @@ const _programIdForRoute = <String, String>{
   '/app/vocabulary': 'daily-vocabulary',
   '/app/listening': 'listening-comprehension',
   '/app/voice-refinement': 'voice-refinement',
+  '/app/reading': 'reading',
 };
 
 @Riverpod(keepAlive: true)
@@ -98,6 +105,13 @@ GoRouter appRouter(Ref ref) {
       GoRoute(
         path: '/app/inbox',
         builder: (_, __) => const InboxScreen(),
+      ),
+      // Voice history — full-screen overlay reached from the Voice tab's
+      // history icon. Its own screen (`VoiceHistoryScreen`), independent from
+      // the Reads tab, with a back button and its own Scaffold/mesh backdrop.
+      GoRoute(
+        path: '/app/voice-history',
+        builder: (_, __) => const VoiceHistoryScreen(),
       ),
       // Assessment — full-screen overlay (no bottom nav).
       GoRoute(
@@ -220,6 +234,40 @@ GoRouter appRouter(Ref ref) {
             path: ':passageId',
             builder: (_, s) => ListeningRuntimeScreen(
               passageId: s.pathParameters['passageId']!,
+            ),
+          ),
+        ],
+      ),
+      GoRoute(
+        path: '/app/reading',
+        builder: (_, __) => const ReadingPathScreen(),
+        routes: [
+          GoRoute(
+            path: 'stage/:stageId',
+            builder: (_, s) => ReadingStageScreen(
+              stageId: s.pathParameters['stageId']!,
+            ),
+          ),
+          GoRoute(
+            path: 'lesson/:stageId/:lessonId',
+            builder: (_, s) => ReadingLessonScreen(
+              stageId: s.pathParameters['stageId']!,
+              lessonId: s.pathParameters['lessonId']!,
+            ),
+          ),
+          GoRoute(
+            path: 'read/:attemptContext',
+            builder: (_, s) => ReadingReadAloudScreen(
+              attemptContext: s.pathParameters['attemptContext']!,
+            ),
+          ),
+          GoRoute(
+            path: 'results/:attemptId',
+            builder: (_, s) => ReadingResultsScreen(
+              attemptId: s.pathParameters['attemptId']!,
+              initial: s.extra is ReadingAttempt
+                  ? s.extra as ReadingAttempt
+                  : null,
             ),
           ),
         ],

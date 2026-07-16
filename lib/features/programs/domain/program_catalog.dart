@@ -69,6 +69,15 @@ const kPrograms = <Program>[
     route: '/app/vocabulary',
   ),
   Program(
+    id: 'reading',
+    label: 'Reading',
+    status: ProgramStatus.live,
+    description:
+        'Read aloud through a programme built around your voice — stages, lessons, and instant feedback on pace and flow.',
+    icon: LucideIcons.bookOpen,
+    route: '/app/reading',
+  ),
+  Program(
     id: 'listening-comprehension',
     label: 'Listening Comprehension',
     status: ProgramStatus.live,

@@ -42,16 +42,34 @@ Deno.serve(async (req) => {
     );
   }
 
-  const { error: profileError } = await admin
+  // Upsert (not update) so we don't silently no-op when the caller has
+  // an auth.users row but no matching profiles row — that combination
+  // can happen if the on_auth_user_created trigger was missing at the
+  // time they signed up. `select("id")` forces PostgREST to return the
+  // affected row so we can assert the write actually landed.
+  const { data: profileRow, error: profileError } = await admin
     .from("profiles")
-    .update({
-      role: invite.role,
-      org_id: invite.org_id,
-      group_id: invite.group_id,
-    })
-    .eq("id", auth.user.id);
+    .upsert(
+      {
+        id: auth.user.id,
+        email: auth.user.email,
+        role: invite.role,
+        org_id: invite.org_id,
+        group_id: invite.group_id,
+        onboarding_completed: false,
+      },
+      { onConflict: "id" },
+    )
+    .select("id")
+    .maybeSingle();
   if (profileError) {
-    console.error("[invitations-accept] profile update", profileError);
+    console.error("[invitations-accept] profile upsert", profileError);
+    return error("Could not link your account to the organization.", 500);
+  }
+  if (!profileRow) {
+    console.error("[invitations-accept] profile upsert returned no row", {
+      user: auth.user.id,
+    });
     return error("Could not link your account to the organization.", 500);
   }
 
