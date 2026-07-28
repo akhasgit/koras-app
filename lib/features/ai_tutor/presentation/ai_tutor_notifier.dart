@@ -1,9 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:developer' as developer;
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:just_audio_background/just_audio_background.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
@@ -151,12 +154,31 @@ class AiTutorNotifier extends _$AiTutorNotifier {
     final pcm = _agentPcm.takeBytes();
     try {
       final dir = await getTemporaryDirectory();
-      final f = File(
-          '${dir.path}/agent-${DateTime.now().microsecondsSinceEpoch}.wav');
+      final id = DateTime.now().microsecondsSinceEpoch.toString();
+      final f = File('${dir.path}/agent-$id.wav');
       await f.writeAsBytes(pcm16ToWav(pcm, sampleRate: _sampleRate));
-      await player.setFilePath(f.path);
+      // just_audio_background requires a MediaItem tag on every source;
+      // bare setFilePath() asserts/throws and was silently killing TTS.
+      await player.setFilePath(
+        f.path,
+        tag: MediaItem(
+          id: id,
+          title: 'Koras',
+          album: 'AI Tutor',
+        ),
+      );
       await player.play();
-    } catch (_) {/* best-effort playback */}
+    } catch (e, st) {
+      developer.log(
+        'Agent TTS playback failed',
+        name: 'AiTutor',
+        error: e,
+        stackTrace: st,
+      );
+      if (kDebugMode) {
+        debugPrint('AiTutor agent TTS playback failed: $e');
+      }
+    }
   }
 
   void _addTurn(String sessionId, TurnRole role, String transcript) {

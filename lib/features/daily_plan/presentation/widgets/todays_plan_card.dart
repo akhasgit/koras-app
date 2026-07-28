@@ -9,6 +9,7 @@ import '../../../../shared/widgets/glass/glass_card.dart';
 import '../../../../shared/widgets/koras_button.dart';
 import '../../../../shared/widgets/koras_pill.dart';
 import '../../data/daily_plan.dart';
+import '../../data/daily_plan_navigation.dart';
 
 /// Server-owned daily plan (Liquid Glass): mirrors the web `TodaysPlanCard`.
 /// The plan is nullable — when null a warm-up placeholder is shown so the
@@ -248,6 +249,7 @@ class _HeroItem extends StatelessWidget {
     final k = context.koras;
     final done = item.status == DailyPlanItemStatus.completed;
     final label = _programLabels[item.programId] ?? item.programId ?? 'Session';
+    final route = mobileRouteForDailyPlanItem(item);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -276,17 +278,17 @@ class _HeroItem extends StatelessWidget {
               ?.copyWith(color: k.ink700, height: 1.55),
         ),
         const SizedBox(height: 14),
-        Row(
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
           children: [
-            if (!done && item.route != null) ...[
+            if (!done && route != null)
               _ActionButton(
                 label: 'Start',
                 icon: LucideIcons.mic,
                 filled: true,
-                onTap: () => context.push(item.route!),
+                onTap: () => context.push(route),
               ),
-              const SizedBox(width: 8),
-            ],
             _ActionButton(
               label: done ? 'Done ✓' : 'Mark done',
               icon: done ? LucideIcons.circleCheck : LucideIcons.circle,
@@ -300,14 +302,12 @@ class _HeroItem extends StatelessWidget {
                             : DailyPlanItemStatus.completed,
                       ),
             ),
-            if (!done) ...[
-              const SizedBox(width: 8),
+            if (!done)
               _ActionButton(
                 label: 'Preview',
                 icon: LucideIcons.fileText,
-                onTap: item.route == null ? null : () => context.push(item.route!),
+                onTap: route == null ? null : () => context.push(route),
               ),
-            ],
           ],
         ),
       ],
@@ -339,6 +339,7 @@ class _PlanItemTile extends StatelessWidget {
     final label = _programLabels[item.programId] ?? item.programId ?? 'Session';
     final minutes =
         item.estimatedMinutes == null ? '' : ' · ${item.estimatedMinutes} min';
+    final route = mobileRouteForDailyPlanItem(item);
 
     return GlassCard(
       radius: 18,
@@ -372,50 +373,48 @@ class _PlanItemTile extends StatelessWidget {
           Text(item.reason,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: skipped ? k.muted : k.ink700, height: 1.5)),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                if (!done && item.route != null) ...[
-                  _ActionButton(
-                    label: 'Start',
-                    icon: LucideIcons.arrowRight,
-                    filled: true,
-                    onTap: () => context.push(item.route!),
-                  ),
-                  const SizedBox(width: 8),
-                ],
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              if (!done && route != null)
                 _ActionButton(
-                  label: done ? 'Done' : 'Mark done',
-                  icon: done ? LucideIcons.circleCheck : LucideIcons.circle,
-                  tone: done ? k.success : null,
+                  label: 'Start',
+                  icon: LucideIcons.arrowRight,
+                  filled: true,
+                  onTap: () => context.push(route),
+                ),
+              _ActionButton(
+                label: done ? 'Done' : 'Mark done',
+                icon: done ? LucideIcons.circleCheck : LucideIcons.circle,
+                tone: done ? k.success : null,
+                onTap: onComplete == null
+                    ? null
+                    : () => onComplete!(
+                          item,
+                          done
+                              ? DailyPlanItemStatus.pending
+                              : DailyPlanItemStatus.completed,
+                        ),
+              ),
+              if (!done)
+                _ActionButton(
+                  label: skipped ? 'Skipped' : 'Skip',
+                  icon: skipped ? LucideIcons.check : LucideIcons.x,
                   onTap: onComplete == null
                       ? null
                       : () => onComplete!(
                             item,
-                            done
+                            skipped
                                 ? DailyPlanItemStatus.pending
-                                : DailyPlanItemStatus.completed,
+                                : DailyPlanItemStatus.skipped,
                           ),
                 ),
-                if (!done) ...[
-                  const SizedBox(width: 8),
-                  _ActionButton(
-                    label: skipped ? 'Skipped' : 'Skip',
-                    icon: skipped ? LucideIcons.check : LucideIcons.x,
-                    onTap: onComplete == null
-                        ? null
-                        : () => onComplete!(
-                              item,
-                              skipped
-                                  ? DailyPlanItemStatus.pending
-                                  : DailyPlanItemStatus.skipped,
-                            ),
-                  ),
-                ],
-              ],
-            ),
-          ],
-        ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

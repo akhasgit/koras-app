@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:go_router/go_router.dart';
 
+import '../../navigation/koras_back.dart';
 import '../koras_header.dart';
 import 'mesh_background.dart';
 
@@ -39,14 +39,7 @@ class GlassScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     VoidCallback? back;
     if (showBack) {
-      back = onBack ??
-          () {
-            if (context.canPop()) {
-              context.pop();
-            } else {
-              context.go('/app/dashboard');
-            }
-          };
+      back = onBack ?? () => korasBack(context);
     }
 
     final body = Column(

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../../../core/errors/app_error.dart';
 import '../../../core/theme/koras_theme.dart';
+import '../../../shared/navigation/koras_back.dart';
 import '../../../shared/widgets/glass/mesh_background.dart';
 import '../../../shared/widgets/koras_button.dart';
 import '../../../shared/widgets/koras_card.dart';
@@ -48,7 +48,7 @@ class AiTutorScreen extends ConsumerWidget {
             KorasButton.primary(
               onPressed: () {
                 notifier.reset();
-                if (context.canPop()) context.pop();
+                korasBack(context);
               },
               child: const Text('Done'),
             ),
@@ -176,7 +176,7 @@ class _LivePanel extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.only(left: 16, top: 4),
                 child: GestureDetector(
-                  onTap: () => context.pop(),
+                  onTap: () => korasBack(context),
                   child: Container(
                     width: 40,
                     height: 40,
@@ -254,7 +254,7 @@ class _ErrorView extends StatelessWidget {
               KorasButton.secondary(
                 onPressed: () {
                   onRetry();
-                  if (context.canPop()) context.pop();
+                  korasBack(context);
                 },
                 child: const Text('Back'),
               ),
@@ -262,7 +262,7 @@ class _ErrorView extends StatelessWidget {
               KorasButton.primary(
                 onPressed: () {
                   onRetry();
-                  if (context.canPop()) context.pop();
+                  korasBack(context);
                 },
                 child: const Text('Back'),
               ),

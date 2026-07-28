@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:go_router/go_router.dart';
 
+import '../navigation/koras_back.dart';
 import 'glass/mesh_background.dart';
 import 'koras_header.dart';
 import 'koras_section.dart';
@@ -44,7 +44,7 @@ class KorasScreen extends StatelessWidget {
       child: body,
     );
 
-    final canPop = context.canPop();
+    final showBack = korasShouldShowBack(context);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
@@ -62,7 +62,7 @@ class KorasScreen extends StatelessWidget {
                     child: KorasHeader(
                       title: title!,
                       kicker: kicker,
-                      onBack: canPop ? () => context.pop() : null,
+                      onBack: showBack ? () => korasBack(context) : null,
                       trailing: actions == null || actions!.isEmpty
                           ? null
                           : Row(mainAxisSize: MainAxisSize.min,
