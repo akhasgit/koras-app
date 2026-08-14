@@ -84,6 +84,19 @@ const kOnboardingQuestions = <OnboardingQuestion>[
   ),
 ];
 
+/// Quiz steps for a learner role. Org members skip program pick — the org
+/// implies program context.
+List<OnboardingQuestion> onboardingQuestionsFor({
+  required bool skipInterestedProgram,
+}) {
+  if (!skipInterestedProgram) return List<OnboardingQuestion>.from(kOnboardingQuestions);
+  return kOnboardingQuestions
+      .where((q) => q.id != 'interested_program')
+      .toList(growable: false);
+}
+
+String onboardingStepPath(String questionId) => '/app/onboarding/$questionId';
+
 const challengeToProgram = <String, String>{
   'fillers': 'public_speaking',
   'pace': 'public_speaking',

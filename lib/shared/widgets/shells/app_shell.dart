@@ -18,8 +18,16 @@ import 'org_admin_drawer.dart';
 /// navigator alive in an IndexedStack — scroll position, form state and
 /// sub-navigation survive tab switches.
 class AppShell extends ConsumerWidget {
-  const AppShell({super.key, required this.navigationShell});
+  const AppShell({
+    super.key,
+    required this.navigationShell,
+    required this.matchedLocation,
+  });
   final StatefulNavigationShell navigationShell;
+  /// From the shell route's [GoRouterState] — do not call
+  /// [GoRouterState.of] here; that fails when the shell first mounts after a
+  /// full-screen route (e.g. post-onboarding → dashboard).
+  final String matchedLocation;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -32,7 +40,7 @@ class AppShell extends ConsumerWidget {
     final role = normalizeFromProfile(profile, org);
     final tabs = tabsForRole(role);
     final fab = fabForRole(role);
-    final loc = GoRouterState.of(context).matchedLocation;
+    final loc = matchedLocation;
 
     // Mesh fills the whole screen including the status bar.
     // No AppBar — each screen owns its own header row (kicker + title + avatar).

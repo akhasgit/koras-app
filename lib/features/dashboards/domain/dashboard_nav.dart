@@ -19,9 +19,8 @@ const appShellBranchRoots = <String>[
   '/app/settings', // 5
   '/app/group', // 6
   '/app/org', // 7
-  '/app/onboarding', // 8
-  '/app/suspended', // 9
-  '/app/admin-unavailable', // 10
+  '/app/suspended', // 8
+  '/app/admin-unavailable', // 9
 ];
 
 /// A bottom-nav / sub-nav destination.

@@ -27,6 +27,7 @@ import '../../features/listening/presentation/listening_home_screen.dart';
 import '../../features/listening/presentation/listening_runtime_screen.dart';
 import '../../features/locked/presentation/locked_screen.dart';
 import '../../features/inbox/presentation/inbox_screen.dart';
+import '../../features/onboarding/domain/onboarding_config.dart';
 import '../../features/onboarding/presentation/onboarding_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/programs/presentation/program_access_providers.dart';
@@ -119,6 +120,19 @@ GoRouter appRouter(Ref ref) {
         builder: (_, s) => AssessScreen(
           isBaseline: s.uri.queryParameters['baseline'] == '1',
         ),
+      ),
+      // Onboarding — full-screen overlay (no bottom nav). Each quiz question
+      // is its own child route so Continue/Back navigate between screens.
+      GoRoute(
+        path: '/app/onboarding',
+        builder: (_, __) => const OnboardingScreen(),
+        routes: [
+          for (final q in kOnboardingQuestions)
+            GoRoute(
+              path: q.id,
+              builder: (_, __) => OnboardingQuestionScreen(questionId: q.id),
+            ),
+        ],
       ),
       // Program routes — full-screen overlays outside the tab shell.
       GoRoute(
@@ -310,8 +324,10 @@ GoRouter appRouter(Ref ref) {
       // Branch order MUST stay in sync with `appShellBranchRoots` in
       // dashboard_nav.dart, which AppShell uses to map a tab -> branch index.
       StatefulShellRoute.indexedStack(
-        builder: (_, __, navigationShell) =>
-            AppShell(navigationShell: navigationShell),
+        builder: (_, state, navigationShell) => AppShell(
+          navigationShell: navigationShell,
+          matchedLocation: state.matchedLocation,
+        ),
         branches: [
           // 0 — Dashboard (home)
           StatefulShellBranch(
@@ -441,15 +457,7 @@ GoRouter appRouter(Ref ref) {
               ),
             ],
           ),
-          // 8 — Onboarding
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                  path: '/app/onboarding',
-                  builder: (_, __) => const OnboardingScreen()),
-            ],
-          ),
-          // 9 — Suspended
+          // 8 — Suspended
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -457,7 +465,7 @@ GoRouter appRouter(Ref ref) {
                   builder: (_, __) => const SuspendedScreen()),
             ],
           ),
-          // 10 — Admin unavailable
+          // 9 — Admin unavailable
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -521,7 +529,7 @@ String? _topLevelRedirect(Ref ref, GoRouterState state) {
 
     if (profile != null &&
         profile.onboardingCompleted != true &&
-        loc != '/app/onboarding') {
+        !loc.startsWith('/app/onboarding')) {
       return '/app/onboarding';
     }
 

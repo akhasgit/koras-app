@@ -11,7 +11,6 @@ const kAppShellRoots = <String>{
   '/app/settings',
   '/app/group',
   '/app/org',
-  '/app/onboarding',
   '/app/suspended',
   '/app/admin-unavailable',
 };
