@@ -12,6 +12,7 @@ import 'package:record/record.dart';
 import '../../../core/errors/app_error.dart';
 import '../../../core/theme/koras_theme.dart';
 import 'pulse_decoration.dart';
+import 'recording_file.dart';
 import 'waveform.dart';
 
 /// One recorder, every program. Owns an [AudioRecorder], a countdown, and the
@@ -46,18 +47,30 @@ class VoiceRecorder extends HookConsumerWidget {
       };
     }, const []);
 
-    final mimeType = Platform.isIOS ? 'audio/mp4' : 'audio/webm';
+    // WAV on iOS — AAC/M4A often lands without a moov atom if we read the
+    // file before AVAudioRecorder finishes writing the trailer.
+    final mimeType = Platform.isIOS ? 'audio/wav' : 'audio/webm';
+    final stopping = useRef(false);
 
     Future<void> stop() async {
+      if (stopping.value) return;
+      stopping.value = true;
       ticker.value?.cancel();
-      final path = await recorder.stop();
-      recording.value = false;
-      if (path != null) {
-        try {
-          await onComplete(File(path), mimeType);
-        } catch (e) {
-          error.value = errorToMessage(e);
+      ticker.value = null;
+      try {
+        final path = await recorder.stop();
+        recording.value = false;
+        if (path == null) return;
+        final file = await waitForFinalizedRecording(File(path));
+        if (!await isPlayableRecording(file)) {
+          error.value = 'That recording didn’t save. Please try again.';
+          return;
         }
+        await onComplete(file, mimeType);
+      } catch (e) {
+        error.value = errorToMessage(e);
+      } finally {
+        stopping.value = false;
       }
     }
 
@@ -71,19 +84,20 @@ class VoiceRecorder extends HookConsumerWidget {
 
       try {
         final dir = await getTemporaryDirectory();
-        final ext = Platform.isIOS ? 'm4a' : 'webm';
+        final ext = Platform.isIOS ? 'wav' : 'webm';
         final path =
             '${dir.path}/koras-${DateTime.now().millisecondsSinceEpoch}.$ext';
 
         await recorder.start(
           RecordConfig(
-            encoder: Platform.isIOS ? AudioEncoder.aacLc : AudioEncoder.opus,
+            encoder: Platform.isIOS ? AudioEncoder.wav : AudioEncoder.opus,
             sampleRate: 16000,
             numChannels: 1,
             bitRate: 64000,
             autoGain: false, // non-negotiable — AGC ruins pitch analysis
-            noiseSuppress: true,
-            echoCancel: true,
+            // Voice-processing on iOS is a common source of truncated M4As.
+            noiseSuppress: !Platform.isIOS,
+            echoCancel: !Platform.isIOS,
           ),
           path: path,
         );
